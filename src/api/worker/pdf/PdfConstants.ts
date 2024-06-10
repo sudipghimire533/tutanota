@@ -72,7 +72,13 @@ export const PDF_DEFAULT_OBJECTS = Object.freeze([
 		refId: "RESOURCES",
 		dictionary: new Map<string, PdfDictValue>([
 			["ProcSet", "[/PDF/Text]"],
-			["XObject", new Map<string, PdfDictValue>([["Im1", { refId: "IMAGE" }]])],
+			[
+				"XObject",
+				new Map<string, PdfDictValue>([
+					["Im1", { refId: "IMG_TUTA_LOGO" }],
+					["Im2", { refId: "IMG_ADDRESS" }],
+				]),
+			],
 			[
 				"Font",
 				new Map<string, PdfObjectRef>([

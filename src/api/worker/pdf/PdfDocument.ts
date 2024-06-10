@@ -10,6 +10,7 @@ export enum PDF_FONTS {
 
 export enum PDF_IMAGES {
 	TUTA_LOGO = 1,
+	ADDRESS = 2,
 }
 
 export type TableColumn = { headerName: string; columnWidth: number }
@@ -30,6 +31,9 @@ const ROWS_FIRST_PAGE_SINGLE = 4 // 2 InvoiceItems
 const ROWS_FIRST_PAGE_MULTIPLE = 24 // 12 InvoiceItems
 // Amount of table rows that can fit on any n-th page that isn't the first
 const ROWS_N_PAGE = 50
+
+const ADDRESS_FIELD_WIDTH = 800
+const ADDRESS_FIELD_HEIGHT = 320
 
 /**
  * Object which manages the high-level creation of a PDF document by parsing function instructions into PDF streams.
@@ -311,6 +315,75 @@ export class PdfDocument {
 			previousWidthOffset += columnInfo[i].columnWidth
 		}
 	}
+
+	/**
+	 * Renders an address field, allowing the inclusion of any character inside text.
+	 * If any multibyte character outside the defined encoding is detected, the text will be written as an image via the canvas API.
+	 * The image will then be attached be inserted into the PDF. If the image generation fails (missing canvas support) fallback text will be rendered
+	 * @param position Coordinates [x,y] where to place the field's origin point
+	 * @param address String containing the address (expected to hold multiple newlines)
+	 */
+	async addAddressField(position: [x: number, y: number], address: string) {
+		const addressParts = address.split("\n")
+		let addressIncludesMultiByteChar = false
+		let imageBuffer = new ArrayBuffer(0)
+
+		// Check addressParts for any invalid characters
+		for (const addressPart of addressParts) {
+			for (let i = 0; i < addressPart.length; i++) {
+				const codePoint = addressPart.codePointAt(i)
+				if (codePoint && !isInsideValidCharRange(codePoint)) {
+					addressIncludesMultiByteChar = true
+					break
+				}
+			}
+		}
+
+		try {
+			if (addressIncludesMultiByteChar) {
+				const canvas = new OffscreenCanvas(ADDRESS_FIELD_WIDTH, ADDRESS_FIELD_HEIGHT)
+				const context = canvas.getContext("2d")
+				if (context) {
+					context.font = "36px serif"
+					context.fillStyle = "white"
+					context.fillRect(0, 0, canvas.width, canvas.height)
+					context.fillStyle = "black"
+
+					for (let i = 0; i < addressParts.length; i++) {
+						context.fillText(addressParts[i], 0, 40 * (i + 1))
+					}
+
+					const dataUrl = await canvas.convertToBlob({ type: "image/jpeg" })
+					imageBuffer = await dataUrl.arrayBuffer()
+					// For the rendered image, we take its dimension divided by 8. This gives a nice resolution for JPEG
+					this.addImage(PDF_IMAGES.ADDRESS, position, [ADDRESS_FIELD_WIDTH / 8, ADDRESS_FIELD_HEIGHT / 8])
+				}
+			}
+		} catch (e) {
+			console.warn(`PDF Error - Cannot render canvas. This is likely because the browser does not support OffscreenCanvas. The error was:\n"${e}"`)
+		}
+
+		// Must create image object in any case since otherwise the reference cannot be resolved. We then just fill it with empty data, but never render it
+		this.pdfWriter.createStreamObject(
+			new Map([
+				["Name", "/Im2"],
+				["Type", "/XObject"],
+				["Subtype", "/Image"],
+				["Width", `${ADDRESS_FIELD_WIDTH}`],
+				["Height", `${ADDRESS_FIELD_HEIGHT}`],
+				["BitsPerComponent", "8"],
+				["ColorSpace", "/DeviceRGB"],
+			]),
+			new Uint8Array(imageBuffer),
+			PdfStreamEncoding.DCT,
+			"IMG_ADDRESS",
+		)
+
+		// Always render the address as text as failsafe and to give partial accessibility
+		for (const addressPart of addressParts) {
+			this.addText(addressPart).addLineBreak()
+		}
+	}
 }
 
 /**
@@ -320,13 +393,17 @@ export function toUnicodePoint(input: string): string[] {
 	const out: string[] = []
 	for (let i = 0; i < input.length; i++) {
 		const codePoint = input.codePointAt(i)
-		if (codePoint && codePoint < 256) {
+		if (codePoint && isInsideValidCharRange(codePoint)) {
 			out.push(codePoint.toString(16))
 		} else {
 			console.warn("Tried printing a character longer than one byte! Ignoring it...")
 		}
 	}
 	return out
+}
+
+export function isInsideValidCharRange(codePoint: number): boolean {
+	return !!(codePoint && codePoint < 256)
 }
 
 export function getWordLengthInPoints(codePoints: string[], font: PDF_FONTS, fontSize: number): number {

@@ -238,7 +238,7 @@ export class PdfWriter {
 			]),
 			new Uint8Array(tutaImage),
 			PdfStreamEncoding.DCT,
-			"IMAGE",
+			"IMG_TUTA_LOGO",
 		)
 		// Metadata
 		this.createStreamObject(
