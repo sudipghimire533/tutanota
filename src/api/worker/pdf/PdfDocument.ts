@@ -6,6 +6,7 @@ import { stringToUtf8Uint8Array } from "@tutao/tutanota-utils"
 export enum PDF_FONTS {
 	REGULAR = 1,
 	BOLD = 2,
+	INVISIBLE_UTF8 = 3,
 }
 
 export enum PDF_IMAGES {
@@ -31,7 +32,6 @@ const ROWS_FIRST_PAGE_SINGLE = 4 // 2 InvoiceItems
 const ROWS_FIRST_PAGE_MULTIPLE = 24 // 12 InvoiceItems
 // Amount of table rows that can fit on any n-th page that isn't the first
 const ROWS_N_PAGE = 50
-
 const ADDRESS_FIELD_WIDTH = 800
 const ADDRESS_FIELD_HEIGHT = 320
 
@@ -380,9 +380,14 @@ export class PdfDocument {
 		)
 
 		// Always render the address as text as failsafe and to give partial accessibility
+
+		this.changeFont(PDF_FONTS.INVISIBLE_UTF8, 12)
+
 		for (const addressPart of addressParts) {
 			this.addText(addressPart).addLineBreak()
 		}
+
+		this.changeFont(PDF_FONTS.REGULAR, 12)
 	}
 }
 
@@ -391,15 +396,33 @@ export class PdfDocument {
  */
 export function toUnicodePoint(input: string): string[] {
 	const out: string[] = []
-	for (let i = 0; i < input.length; i++) {
-		const codePoint = input.codePointAt(i)
-		if (codePoint && isInsideValidCharRange(codePoint)) {
-			out.push(codePoint.toString(16))
-		} else {
-			console.warn("Tried printing a character longer than one byte! Ignoring it...")
+	let offSet = 29
+
+	return input.split("").map((c) => {
+		const charCodeDec = c.charCodeAt(0)
+		let offSet = 29 // 1D
+
+		if (c == "ö") {
+			console.log(charCodeDec)
 		}
-	}
-	return out
+
+		if (charCodeDec > 98) {
+			offSet = 64 //40
+		}
+
+		return (c.charCodeAt(0) - offSet).toString(16).padStart(4, "0")
+	})
+
+	// for (let i = 0; i < input.length; i++) {
+	// 	const codePoint = input.codePointAt(i)
+	// 	if (codePoint && isInsideValidCharRange(codePoint)) {
+	// 		out.push(codePoint.toString(16))
+	// 		console.log(codePoint.toString(16))
+	// 	} else {
+	// 		console.warn("Tried printing a character longer than one byte! Ignoring it...")
+	// 	}
+	// }
+	// return out
 }
 
 export function isInsideValidCharRange(codePoint: number): boolean {

@@ -191,15 +191,21 @@ export class PdfWriter {
 		const baseUrl = typeof location === "undefined" ? "" : location.protocol + "//" + location.hostname + (location.port ? ":" + location.port : "")
 		if (!this.cachedResources) {
 			this.cachedResources = await Promise.all(
-				["/pdf/SourceSans3-Regular.ttf", "/pdf/SourceSans3-Bold.ttf", "/pdf/sRGB2014.icc", "/pdf/tutanota_logo_en.jpg", "/pdf/metadata.xml"].map(
-					(url) =>
-						typeof this.customFetch !== "undefined"
-							? this.customFetch(baseUrl + url).then((r) => r.arrayBuffer())
-							: fetch(baseUrl + url).then((r) => r.arrayBuffer()),
+				[
+					"/pdf/SourceSans3-Regular-C.ttf",
+					"/pdf/SourceSans3-Bold.ttf",
+					"/pdf/identity.cmap",
+					"/pdf/sRGB2014.icc",
+					"/pdf/tutanota_logo_en.jpg",
+					"/pdf/metadata.xml",
+				].map((url) =>
+					typeof this.customFetch !== "undefined"
+						? this.customFetch(baseUrl + url).then((r) => r.arrayBuffer())
+						: fetch(baseUrl + url).then((r) => r.arrayBuffer()),
 				),
 			)
 		}
-		const [fontRegular, fontBold, colorProfile, tutaImage, metaData] = this.cachedResources
+		const [fontRegular, fontBold, cmap, colorProfile, tutaImage, metaData] = this.cachedResources
 
 		// Regular font file
 		this.createStreamObject(
@@ -215,6 +221,10 @@ export class PdfWriter {
 			PdfStreamEncoding.FLATE,
 			"FONT_BOLD_FILE",
 		)
+
+		// CMAP file
+		this.createStreamObject(new Map([["Length1", cmap.byteLength.toString()]]), await this.deflater.deflate(cmap), PdfStreamEncoding.FLATE, "CMAP")
+
 		// Color profile
 		this.createStreamObject(
 			new Map([

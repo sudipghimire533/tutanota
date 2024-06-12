@@ -84,6 +84,7 @@ export const PDF_DEFAULT_OBJECTS = Object.freeze([
 				new Map<string, PdfObjectRef>([
 					["F1", { refId: "FONT_REGULAR" }],
 					["F2", { refId: "FONT_BOLD" }],
+					["F3", { refId: "FONT_INVISIBLE_UTF8" }],
 				]),
 			],
 		]),
@@ -113,6 +114,32 @@ export const PDF_DEFAULT_OBJECTS = Object.freeze([
 			["Flags", "64"],
 		]),
 	}),
+
+	// Let him cook
+	Object.freeze({
+		refId: "FONT_INVISIBLE_UTF8",
+		dictionary: new Map<string, PdfDictValue>([
+			["Type", "/Font"],
+			["BaseFont", "/SourceSans3-Regular"],
+			["Subtype", "/Type0"],
+			["Encoding", "/Identity-H"],
+			["DescendantFonts", [{ refId: "FONT_INVISIBLE_UTF8_DESCENDANT" }]],
+			["ToUnicode", { refId: "CMAP" }],
+		]),
+	}),
+	Object.freeze({
+		refId: "FONT_INVISIBLE_UTF8_DESCENDANT",
+		dictionary: new Map<string, PdfDictValue>([
+			["Type", "/Font"],
+			["BaseFont", "/SourceSans3-Regular"],
+			["Subtype", "/CIDFontType2"],
+			["CIDToGIDMap", "/Identity"],
+			["FontDescriptor", { refId: "FONT_REGULAR_DESCRIPTOR" }],
+			["CIDSystemInfo", "<< /Registry (Adobe) /Ordering (UCS) /Supplement 0>>"],
+			["DW", "800"],
+		]),
+	}),
+
 	Object.freeze({
 		// Bold font
 		refId: "FONT_BOLD",

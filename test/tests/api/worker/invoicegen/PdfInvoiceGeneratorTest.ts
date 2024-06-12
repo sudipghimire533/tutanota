@@ -4,6 +4,7 @@ import { createTestEntity } from "../../../TestUtils.js"
 import { InvoiceDataGetOutTypeRef, InvoiceDataItemTypeRef } from "../../../../../src/api/entities/sys/TypeRefs.js"
 import { PdfInvoiceGenerator } from "../../../../../src/api/worker/invoicegen/PdfInvoiceGenerator.js"
 import { object, when } from "testdouble"
+import fs from "fs"
 
 async function fetchStub(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
 	if (globalThis.isBrowser) {
@@ -25,13 +26,15 @@ o.spec("PdfInvoiceGenerator", function () {
 
 	o("Gen", async function () {
 		const invoiceData = createTestEntity(InvoiceDataGetOutTypeRef, {
-			address: "竜宮レナ\n白川村\n日本国",
+			// address: "   𱁬Hallo!竜宮レナ\n白川村\n日本国America Ya :Döööö",
+			address: " !0123455545ööö",
 			country: "JP",
 			items: dataMock(2),
 		})
 
 		const gen = new PdfInvoiceGenerator(pdfWriter, invoiceData, "1978197819801981931", "NiiNii")
 		const pdf = await gen.generate()
+		fs.writeFileSync("/tmp/ttt.pdf", pdf, { flag: "w" })
 	})
 
 	o("Entries fit all on a single page but generate a new empty page", async function () {
