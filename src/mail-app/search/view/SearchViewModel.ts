@@ -127,10 +127,10 @@ export class SearchViewModel {
 		private readonly indexerFacade: Indexer,
 		private readonly entityClient: EntityClient,
 		private readonly eventController: EventController,
-		private readonly mailOpenedListener: MailOpenedListener,
+		private readonly mailOpenedListener: MailOpenedListener | null,
 		private readonly calendarFacade: CalendarFacade,
 		private readonly progressTracker: ProgressTracker,
-		private readonly conversationViewModelFactory: ConversationViewModelFactory,
+		private readonly conversationViewModelFactory: ConversationViewModelFactory | null,
 		private readonly updateUi: () => unknown,
 		private readonly selectionBehavior: ListAutoSelectBehavior,
 	) {
@@ -650,9 +650,11 @@ export class SearchViewModel {
 	}
 
 	private updateDisplayedConversation(mail: Mail): void {
-		this.conversationViewModel = this.conversationViewModelFactory({ mail, showFolder: true })
+		// TODO: Fix this when splitting search functionality issue #7155
+		//this.conversationViewModel = this.conversationViewModelFactory({ mail, showFolder: true })
 		// Notify the admin client about the mail being selected
-		this.mailOpenedListener.onEmailOpened(mail)
+		// TODO: Fix this when splitting search functionality issue #7155
+		//this.mailOpenedListener.onEmailOpened(mail)
 	}
 
 	private createList(): ListModel<SearchResultListEntry> {

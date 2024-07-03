@@ -36,6 +36,7 @@ import { ContactViewModel } from "./contacts/view/ContactViewModel.js"
 import { ContactListViewModel } from "./contacts/view/ContactListViewModel.js"
 import type { CredentialsMigrationView, CredentialsMigrationViewAttrs } from "../common/login/CredentialsMigrationView.js"
 import type { CredentialsMigrationViewModel } from "../common/login/CredentialsMigrationViewModel.js"
+import { mailLocator } from "./mailLocator.js"
 
 assertMainOrNodeBoot()
 bootFinished()
@@ -84,6 +85,9 @@ import("./translations/en.js")
 		// do this after lang initialized
 		const { locator } = await import("../common/api/main/MainLocator.js")
 		await locator.init()
+
+		const { mailLocator } = await import("./mailLocator.js")
+		await mailLocator.init()
 
 		const { setupNavShortcuts } = await import("../common/misc/NavShortcuts.js")
 		setupNavShortcuts()
@@ -147,8 +151,8 @@ import("./translations/en.js")
 						cache: {
 							drawerAttrsFactory,
 							header: await locator.appHeaderAttrs(),
-							contactViewModel: await locator.contactViewModel(),
-							contactListViewModel: await locator.contactListViewModel(),
+							contactViewModel: await mailLocator.contactViewModel(),
+							contactListViewModel: await mailLocator.contactListViewModel(),
 						},
 					}
 				},
@@ -171,6 +175,7 @@ import("./translations/en.js")
 
 						const { LoginView } = await import("../common/login/LoginView.js")
 						const makeViewModel = await locator.loginViewModelFactory()
+						makeViewModel().setCredentialRemovalHandler(await mailLocator.credentialsRemovalHandler())
 						return {
 							component: LoginView,
 							cache: {
@@ -208,7 +213,7 @@ import("./translations/en.js")
 				{
 					prepareRoute: async () => {
 						const { ExternalLoginView } = await import("../common/login/ExternalLoginView.js")
-						const makeViewModel = await locator.externalLoginViewModelFactory()
+						const makeViewModel = await mailLocator.externalLoginViewModelFactory()
 						return {
 							component: ExternalLoginView,
 							cache: { header: await locator.appHeaderAttrs(), makeViewModel },
@@ -238,7 +243,7 @@ import("./translations/en.js")
 								drawerAttrsFactory: await locator.drawerAttrsFactory(),
 								cache: { mailList: null, selectedFolder: null, conversationViewModel: null, conversationViewPreference: null },
 								header: await locator.appHeaderAttrs(),
-								mailViewModel: await locator.mailViewModel(),
+								mailViewModel: await mailLocator.mailViewModel(),
 							},
 						}
 					},
@@ -433,6 +438,7 @@ import("./translations/en.js")
 						const domainConfig = locator.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
 						const parentOrigin = domainConfig.partneredDomainTransitionUrl
 						const loginViewModelFactory = await locator.loginViewModelFactory()
+						loginViewModelFactory().setCredentialRemovalHandler(await mailLocator.credentialsRemovalHandler())
 						const credentialsMigrationViewModel = new CredentialsMigrationViewModel(loginViewModelFactory(), parentOrigin)
 						return {
 							component: CredentialsMigrationView,

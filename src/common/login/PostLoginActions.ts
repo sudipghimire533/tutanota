@@ -100,7 +100,8 @@ export class PostLoginActions implements PostLoginAction {
 		if (isApp()) {
 			// don't wait for it, just invoke
 			locator.fileApp.clearFileData().catch((e) => console.log("Failed to clean file data", e))
-			locator.nativeContactsSyncManager()?.syncContacts()
+			// FIXME: contact sync is a mail-app only function, should somehow move out of here
+			// locator.nativeContactsSyncManager()?.syncContacts()
 		}
 
 		// We already have user data to load themes

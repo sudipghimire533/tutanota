@@ -137,6 +137,7 @@ export class LoginViewModel implements ILoginViewModel {
 	helpText: TranslationText
 	readonly savePassword: Stream<boolean>
 	private savedInternalCredentials: ReadonlyArray<CredentialsInfo>
+	private credentialRemovalHandler: CredentialRemovalHandler | null
 
 	// visibleForTesting
 	autoLoginCredentials: CredentialsInfo | null
@@ -147,7 +148,6 @@ export class LoginViewModel implements ILoginViewModel {
 		private readonly secondFactorHandler: SecondFactorHandler,
 		private readonly deviceConfig: DeviceConfig,
 		private readonly domainConfig: DomainConfig,
-		private readonly credentialRemovalHandler: CredentialRemovalHandler,
 		private readonly pushServiceApp: NativePushServiceApp | null,
 		private readonly appLock: AppLock,
 	) {
@@ -159,6 +159,11 @@ export class LoginViewModel implements ILoginViewModel {
 		this.autoLoginCredentials = null
 		this.savePassword = stream(false)
 		this.savedInternalCredentials = []
+		this.credentialRemovalHandler = null
+	}
+
+	setCredentialRemovalHandler(crh: CredentialRemovalHandler) {
+		this.credentialRemovalHandler = crh
 	}
 
 	/**
@@ -240,7 +245,9 @@ export class LoginViewModel implements ILoginViewModel {
 			} else if (e instanceof DeviceStorageUnavailableError) {
 				// We want to allow deleting credentials even if keychain fails
 				await this.credentialsProvider.deleteByUserId(credentialsInfo.userId)
-				await this.credentialRemovalHandler.onCredentialsRemoved(credentialsInfo)
+				if (this.credentialRemovalHandler) {
+					await this.credentialRemovalHandler.onCredentialsRemoved(credentialsInfo)
+				}
 				await this.updateCachedCredentials()
 			} else {
 				throw e
@@ -250,7 +257,9 @@ export class LoginViewModel implements ILoginViewModel {
 		if (credentials) {
 			await this.loginController.deleteOldSession(credentials, (await this.pushServiceApp?.loadPushIdentifierFromNative()) ?? null)
 			await this.credentialsProvider.deleteByUserId(credentials.credentialInfo.userId)
-			await this.credentialRemovalHandler.onCredentialsRemoved(credentials.credentialInfo)
+			if (this.credentialRemovalHandler) {
+				await this.credentialRemovalHandler.onCredentialsRemoved(credentials.credentialInfo)
+			}
 			await this.updateCachedCredentials()
 		}
 	}
@@ -377,7 +386,7 @@ export class LoginViewModel implements ILoginViewModel {
 			if (e instanceof NotAuthenticatedError && this.autoLoginCredentials) {
 				const autoLoginCredentials = this.autoLoginCredentials
 				await this.credentialsProvider.deleteByUserId(autoLoginCredentials.userId)
-				if (credentials) {
+				if (credentials && this.credentialRemovalHandler) {
 					await this.credentialRemovalHandler.onCredentialsRemoved(credentials.credentialInfo)
 				}
 				await this.updateCachedCredentials()

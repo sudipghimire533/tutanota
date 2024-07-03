@@ -32,6 +32,7 @@ import { PermissionType } from "../../common/native/common/generatedipc/Permissi
 import { SystemPermissionHandler } from "../../common/native/main/SystemPermissionHandler.js"
 import { KindaContactRow } from "./view/ContactListView.js"
 import { SelectAllCheckbox } from "../../common/gui/SelectAllCheckbox.js"
+import { mailLocator } from "../mailLocator.js"
 
 export class ContactImporter {
 	constructor(private readonly contactFacade: ContactFacade, private readonly systemPermissionHandler: SystemPermissionHandler) {}
@@ -118,7 +119,7 @@ export class ContactImporter {
 			})
 		).flat()
 
-		const importer = await locator.contactImporter()
+		const importer = await mailLocator.contactImporter()
 
 		showContactImportDialog(
 			contactsToImport,

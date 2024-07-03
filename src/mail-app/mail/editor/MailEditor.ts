@@ -87,6 +87,7 @@ import {
 	LINE_BREAK,
 	RecipientField,
 } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { mailLocator } from "../../mailLocator.js"
 
 export type MailEditorAttrs = {
 	model: SendMailModel
@@ -866,7 +867,7 @@ async function createMailEditorDialog(model: SendMailModel, blockExternalContent
 		}
 		// If the mail is unchanged and there /is/ a preexisting draft, there was no change and the mail is already saved
 		else saveStatus = stream<SaveStatus>({ status: SaveStatusEnum.Saved })
-		showMinimizedMailEditor(dialog, model, locator.minimizedMailModel, locator.eventController, dispose, saveStatus)
+		showMinimizedMailEditor(dialog, model, mailLocator.minimizedMailModel, locator.eventController, dispose, saveStatus)
 	}
 
 	let windowCloseUnsubscribe = () => {}

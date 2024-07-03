@@ -40,10 +40,10 @@ export function renderBannerButton(text: TranslationKey, onclick: ClickHandler, 
 export async function showSetupWizard(
 	systemPermissionHandler: SystemPermissionHandler,
 	webMobileFacade: WebMobileFacade,
-	contactImporter: ContactImporter,
+	contactImporter: ContactImporter | null,
 	systemFacade: MobileSystemFacade,
 	credentialsProvider: CredentialsProvider,
-	contactSyncManager: NativeContactsSyncManager,
+	contactSyncManager: NativeContactsSyncManager | null,
 	deviceConfig: DeviceConfig,
 ): Promise<void> {
 	const wizardPages = [
@@ -53,7 +53,8 @@ export async function showSetupWizard(
 			new SetupNotificationsPageAttrs(await systemPermissionHandler.queryPermissionsState(), webMobileFacade.getIsAppVisible(), systemPermissionHandler),
 		),
 		wizardPageWrapper(SetupThemePage, new SetupThemePageAttrs()),
-		wizardPageWrapper(SetupContactsPage, new SetupContactsPageAttrs(contactSyncManager, contactImporter, systemFacade)),
+		// TODO: fix in setup wizard story #7150, contactsSyncManager and mailLocater
+		wizardPageWrapper(SetupContactsPage, new SetupContactsPageAttrs(null, null, systemFacade)),
 		wizardPageWrapper(SetupLockPage, new SetupLockPageAttrs(locator.systemFacade)),
 	]
 	const deferred = defer<void>()

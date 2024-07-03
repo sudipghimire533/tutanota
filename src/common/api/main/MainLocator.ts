@@ -64,9 +64,7 @@ import { GroupInfo } from "../entities/sys/TypeRefs.js"
 import type { SendMailModel } from "../../mailFunctionality/SendMailModel.js"
 import type { CalendarEvent, Mail, MailboxProperties } from "../entities/tutanota/TypeRefs.js"
 import { CalendarEventAttendee } from "../entities/tutanota/TypeRefs.js"
-import type { CreateMailViewerOptions } from "../../../mail-app/mail/view/MailViewer.js"
 import type { RecipientsSearchModel } from "../../misc/RecipientsSearchModel.js"
-import type { MailViewerViewModel } from "../../../mail-app/mail/view/MailViewerViewModel.js"
 import { NoZoneDateProvider } from "../common/utils/NoZoneDateProvider.js"
 import { WebsocketConnectivityModel } from "../../misc/WebsocketConnectivityModel.js"
 import { DrawerMenuAttrs } from "../../gui/nav/DrawerMenu.js"
@@ -79,15 +77,11 @@ import { AppHeaderAttrs, Header } from "../../gui/Header.js"
 import { CalendarViewModel } from "../../../calendar-app/calendar/view/CalendarViewModel.js"
 import { ReceivedGroupInvitationsModel } from "../../sharing/model/ReceivedGroupInvitationsModel.js"
 import { Const, FeatureType, GroupType, KdfType } from "../common/TutanotaConstants.js"
-import type { ExternalLoginViewModel } from "../../login/ExternalLoginView.js"
-import type { ConversationViewModel, ConversationViewModelFactory } from "../../../mail-app/mail/view/ConversationViewModel.js"
 import type { AlarmScheduler } from "../../../calendar-app/calendar/date/AlarmScheduler.js"
 import { CalendarEventModel, CalendarOperation } from "../../../calendar-app/calendar/gui/eventeditor-model/CalendarEventModel.js"
 import { showProgressDialog } from "../../gui/dialogs/ProgressDialog.js"
 import { SearchViewModel } from "../../../mail-app/search/view/SearchViewModel.js"
 import { SearchRouter } from "../../../mail-app/search/view/SearchRouter.js"
-import { MailOpenedListener } from "../../../mail-app/mail/view/MailViewModel.js"
-import { InboxRuleHandler } from "../../../mail-app/mail/model/InboxRuleHandler.js"
 import { Router, ScopedRouter, ThrottledRouter } from "../../gui/ScopedRouter.js"
 import { ShareableGroupType } from "../../sharing/GroupUtils.js"
 import { DomainConfigProvider } from "../common/DomainConfigProvider.js"
@@ -98,16 +92,13 @@ import type { CalendarEventPreviewViewModel } from "../../../calendar-app/calend
 import { isCustomizationEnabledForCustomer } from "../common/utils/CustomerUtils.js"
 import { CalendarEventsRepository } from "../../../calendar-app/calendar/date/CalendarEventsRepository.js"
 import { CalendarInviteHandler } from "../../../calendar-app/calendar/view/CalendarInvites.js"
-import { NativeContactsSyncManager } from "../../../mail-app/contacts/model/NativeContactsSyncManager.js"
 import { ContactFacade } from "../worker/facades/lazy/ContactFacade.js"
-import { ContactImporter } from "../../../mail-app/contacts/ContactImporter.js"
 import { MobileContactsFacade } from "../../native/common/generatedipc/MobileContactsFacade.js"
 import { PermissionError } from "../common/error/PermissionError.js"
 import { WebMobileFacade } from "../../native/main/WebMobileFacade.js"
 import { CredentialFormatMigrator } from "../../misc/credentials/CredentialFormatMigrator.js"
 import { NativeCredentialsFacade } from "../../native/common/generatedipc/NativeCredentialsFacade.js"
 import { SqlCipherFacade } from "../../native/common/generatedipc/SqlCipherFacade.js"
-import { AddNotificationEmailDialog } from "../../../mail-app/settings/AddNotificationEmailDialog.js"
 import { MobileAppLock, NoOpAppLock } from "../../login/AppLock.js"
 import { PostLoginActions } from "../../login/PostLoginActions.js"
 import { SystemPermissionHandler } from "../../native/main/SystemPermissionHandler.js"
@@ -120,7 +111,6 @@ class MainLocator {
 	eventController!: EventController
 	search!: SearchModel
 	mailModel!: MailModel
-	minimizedMailModel!: MinimizedMailEditorViewModel
 	contactModel!: ContactModel
 	entityClient!: EntityClient
 	progressTracker!: ProgressTracker
@@ -186,7 +176,7 @@ class MainLocator {
 		return factory()
 	}
 
-	private readonly redraw: lazyAsync<() => unknown> = lazyMemoized(async () => {
+	readonly redraw: lazyAsync<() => unknown> = lazyMemoized(async () => {
 		const m = await import("mithril")
 		return m.redraw
 	})
@@ -209,32 +199,11 @@ class MainLocator {
 		}
 	}
 
-	readonly mailViewModel = lazyMemoized(async () => {
-		const { MailViewModel } = await import("../../../mail-app/mail/view/MailViewModel.js")
-		const conversationViewModelFactory = await this.conversationViewModelFactory()
-		const router = new ScopedRouter(this.throttledRouter(), "/mail")
-		return new MailViewModel(
-			this.mailModel,
-			this.entityClient,
-			this.eventController,
-			this.connectivityModel,
-			this.cacheStorage,
-			conversationViewModelFactory,
-			this.mailOpenedListener,
-			deviceConfig,
-			this.inboxRuleHanlder(),
-			router,
-			await this.redraw(),
-		)
-	})
-
-	inboxRuleHanlder(): InboxRuleHandler {
-		return new InboxRuleHandler(this.mailFacade, this.entityClient, this.logins)
-	}
-
 	async searchViewModelFactory(): Promise<() => SearchViewModel> {
 		const { SearchViewModel } = await import("../../../mail-app/search/view/SearchViewModel.js")
-		const conversationViewModelFactory = await this.conversationViewModelFactory()
+		// TODO: Fix this when splitting search functionality issue #7155
+		// also MailOpenedListener
+		//const conversationViewModelFactory = await this.conversationViewModelFactory()
 		const redraw = await this.redraw()
 		const searchRouter = await this.scopedSearchRouter()
 		return () => {
@@ -247,10 +216,10 @@ class MainLocator {
 				this.indexerFacade,
 				this.entityClient,
 				this.eventController,
-				this.mailOpenedListener,
+				null,
 				this.calendarFacade,
 				this.progressTracker,
-				conversationViewModelFactory,
+				null,
 				redraw,
 				deviceConfig.getMailAutoSelectBehavior(),
 			)
@@ -267,35 +236,6 @@ class MainLocator {
 	readonly unscopedSearchRouter: lazyAsync<SearchRouter> = lazyMemoized(async () => {
 		const { SearchRouter } = await import("../../../mail-app/search/view/SearchRouter.js")
 		return new SearchRouter(this.throttledRouter())
-	})
-
-	readonly mailOpenedListener: MailOpenedListener = {
-		onEmailOpened: isDesktop()
-			? (mail) => {
-					this.desktopSystemFacade.sendSocketMessage(getDisplayedSender(mail).address)
-			  }
-			: noOp,
-	}
-
-	readonly contactViewModel = lazyMemoized(async () => {
-		const { ContactViewModel } = await import("../../../mail-app/contacts/view/ContactViewModel.js")
-		const router = new ScopedRouter(this.throttledRouter(), "/contact")
-		return new ContactViewModel(this.contactModel, this.entityClient, this.eventController, router, await this.redraw())
-	})
-
-	readonly contactListViewModel = lazyMemoized(async () => {
-		const { ContactListViewModel } = await import("../../../mail-app/contacts/view/ContactListViewModel.js")
-		const router = new ScopedRouter(this.throttledRouter(), "/contactlist")
-		return new ContactListViewModel(
-			this.entityClient,
-			this.groupManagementFacade,
-			this.logins,
-			this.eventController,
-			this.contactModel,
-			await this.receivedGroupInvitationsModel(GroupType.ContactList),
-			router,
-			await this.redraw(),
-		)
 	})
 
 	async receivedGroupInvitationsModel<TypeOfGroup extends ShareableGroupType>(groupType: TypeOfGroup): Promise<ReceivedGroupInvitationsModel<TypeOfGroup>> {
@@ -394,63 +334,6 @@ class MainLocator {
 		return new RecipientsSearchModel(await this.recipientsModel(), this.contactModel, suggestionsProvider, this.entityClient)
 	}
 
-	readonly conversationViewModelFactory: lazyAsync<ConversationViewModelFactory> = async () => {
-		const { ConversationViewModel } = await import("../../../mail-app/mail/view/ConversationViewModel.js")
-		const factory = await this.mailViewerViewModelFactory()
-		const m = await import("mithril")
-		return (options: CreateMailViewerOptions) => {
-			return new ConversationViewModel(
-				options,
-				(options) => factory(options),
-				this.entityClient,
-				this.eventController,
-				deviceConfig,
-				this.mailModel,
-				m.redraw,
-			)
-		}
-	}
-
-	async conversationViewModel(options: CreateMailViewerOptions): Promise<ConversationViewModel> {
-		const factory = await this.conversationViewModelFactory()
-		return factory(options)
-	}
-
-	contactImporter = async (): Promise<ContactImporter> => {
-		const { ContactImporter } = await import("../../../mail-app/contacts/ContactImporter.js")
-		return new ContactImporter(this.contactFacade, this.systemPermissionHandler)
-	}
-
-	async mailViewerViewModelFactory(): Promise<(options: CreateMailViewerOptions) => MailViewerViewModel> {
-		const { MailViewerViewModel } = await import("../../../mail-app/mail/view/MailViewerViewModel.js")
-		return ({ mail, showFolder }) =>
-			new MailViewerViewModel(
-				mail,
-				showFolder,
-				this.entityClient,
-				this.mailModel,
-				this.contactModel,
-				this.configFacade,
-				this.fileController,
-				this.logins,
-				async (mailboxDetails) => {
-					const mailboxProperties = await this.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-					return this.sendMailModel(mailboxDetails, mailboxProperties)
-				},
-				this.eventController,
-				this.workerFacade,
-				this.search,
-				this.mailFacade,
-				this.cryptoFacade,
-				() => this.contactImporter(),
-			)
-	}
-
-	async externalLoginViewModelFactory(): Promise<() => ExternalLoginViewModel> {
-		const { ExternalLoginViewModel } = await import("../../login/ExternalLoginView.js")
-		return () => new ExternalLoginViewModel(this.credentialsProvider)
-	}
-
 	get native(): NativeInterfaceMain {
 		return this.getNativeInterface("native")
 	}
@@ -535,16 +418,8 @@ class MainLocator {
 		return new DomainConfigProvider()
 	}
 
-	async credentialsRemovalHandler(): Promise<CredentialRemovalHandler> {
-		const { NoopCredentialRemovalHandler, AppsCredentialRemovalHandler } = await import("../../login/CredentialRemovalHandler.js")
-		return isBrowser()
-			? new NoopCredentialRemovalHandler()
-			: new AppsCredentialRemovalHandler(this.indexerFacade, this.pushService, this.configFacade, isApp() ? this.nativeContactsSyncManager() : null)
-	}
-
 	async loginViewModelFactory(): Promise<lazy<LoginViewModel>> {
 		const { LoginViewModel } = await import("../../login/LoginViewModel.js")
-		const credentialsRemovalHandler = await locator.credentialsRemovalHandler()
 		const { MobileAppLock, NoOpAppLock } = await import("../../login/AppLock.js")
 		const appLock = isApp()
 			? new MobileAppLock(assertNotNull(this.nativeInterfaces).mobileSystemFacade, assertNotNull(this.nativeInterfaces).nativeCredentialsFacade)
@@ -561,7 +436,6 @@ class MainLocator {
 				locator.secondFactorHandler,
 				deviceConfig,
 				domainConfig,
-				credentialsRemovalHandler,
 				isBrowser() ? null : this.pushService,
 				appLock,
 			)
@@ -773,7 +647,6 @@ class MainLocator {
 
 		const { ContactModel } = await import("../../contactsFunctionality/ContactModel.js")
 		this.contactModel = new ContactModel(this.searchFacade, this.entityClient, this.logins, this.eventController)
-		this.minimizedMailModel = new MinimizedMailEditorViewModel()
 		this.usageTestController = new UsageTestController(this.usageTestModel)
 	}
 
@@ -849,11 +722,6 @@ class MainLocator {
 		return popupModel
 	}
 
-	readonly nativeContactsSyncManager = lazyMemoized(() => {
-		assert(isApp(), "isApp")
-		return new NativeContactsSyncManager(this.logins, this.mobileContactsFacade, this.entityClient, this.eventController, this.contactModel, deviceConfig)
-	})
-
 	postLoginActions: () => Promise<PostLoginActions> = lazyMemoized(async () => {
 		const { PostLoginActions } = await import("../../login/PostLoginActions")
 		return new PostLoginActions(
@@ -872,15 +740,8 @@ class MainLocator {
 	showSetupWizard = async () => {
 		if (isApp()) {
 			const { showSetupWizard } = await import("../../native/main/wizard/SetupWizard.js")
-			return showSetupWizard(
-				this.systemPermissionHandler,
-				this.webMobileFacade,
-				await this.contactImporter(),
-				this.systemFacade,
-				this.credentialsProvider,
-				await this.nativeContactsSyncManager(),
-				deviceConfig,
-			)
+			// TODO: fix in setup wizard story #7150, handle nativeContactSyncManager and contactImporter in mailLocator
+			return showSetupWizard(this.systemPermissionHandler, this.webMobileFacade, null, this.systemFacade, this.credentialsProvider, null, deviceConfig)
 		}
 	}
 	readonly credentialFormatMigrator: () => Promise<CredentialFormatMigrator> = lazyMemoized(async () => {
@@ -893,11 +754,6 @@ class MainLocator {
 			return new CredentialFormatMigrator(deviceConfig, null, null)
 		}
 	})
-
-	async addNotificationEmailDialog(): Promise<AddNotificationEmailDialog> {
-		const { AddNotificationEmailDialog } = await import("../../../mail-app/settings/AddNotificationEmailDialog.js")
-		return new AddNotificationEmailDialog(this.logins, this.entityClient)
-	}
 
 	// For testing argon2 migration after login. The production server will reject this request.
 	// This can be removed when we enable the migration.

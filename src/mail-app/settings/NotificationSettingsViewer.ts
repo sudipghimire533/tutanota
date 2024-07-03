@@ -17,6 +17,7 @@ import { PushServiceType } from "../../common/api/common/TutanotaConstants.js"
 import { DropDownSelector, DropDownSelectorAttrs } from "../../common/gui/base/DropDownSelector.js"
 import { ExpanderButton, ExpanderPanel } from "../../common/gui/base/Expander.js"
 import { IdentifierRow } from "./IdentifierRow.js"
+import { mailLocator } from "../mailLocator.js"
 
 export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 	private currentIdentifier: string | null = null
@@ -102,7 +103,7 @@ export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 	}
 
 	private async showAddEmailNotificationDialog() {
-		const dialog = await locator.addNotificationEmailDialog()
+		const dialog = await mailLocator.addNotificationEmailDialog()
 		dialog.show()
 	}
 

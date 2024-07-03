@@ -4,18 +4,21 @@ import { lang } from "../../../../misc/LanguageViewModel.js"
 import { SetupPageLayout } from "./SetupPageLayout.js"
 import { NativeContactsSyncManager } from "../../../../../mail-app/contacts/model/NativeContactsSyncManager.js"
 import { ContactImporter } from "../../../../../mail-app/contacts/ContactImporter.js"
-import { Dialog } from "../../../../gui/base/Dialog.js"
 import { MobileSystemFacade } from "../../../common/generatedipc/MobileSystemFacade.js"
 import { renderBannerButton } from "../SetupWizard.js"
 
 export class SetupContactsPage implements Component<SetupContactsPageAttrs> {
 	view({ attrs }: Vnode<SetupContactsPageAttrs>): Children {
-		const isContactSyncEnabled = attrs.syncManager.isEnabled()
+		// TODO: fix in setup wizard story #7150
+		//const isContactSyncEnabled = attrs.syncManager.isEnabled()
+		const isContactSyncEnabled = false
 
 		return m(SetupPageLayout, { image: "contacts" }, [
 			m("p.mb-s", lang.get("importContacts_msg")),
 			renderBannerButton("import_action", () => {
-				attrs.contactImporter.importContactsFromDeviceSafely()
+				// TODO: fix in setup wizard story #7150
+				//attrs.contactImporter.importContactsFromDeviceSafely()
+				console.log("fix me!")
 			}),
 			m("p.mb-s", lang.get("allowContactSynchronization")),
 			renderBannerButton(
@@ -30,13 +33,14 @@ export class SetupContactsPage implements Component<SetupContactsPageAttrs> {
 	}
 
 	private async enableSync(attrs: SetupContactsPageAttrs) {
-		attrs.syncManager.enableSync()
-		const success = await attrs.syncManager.syncContacts()
-		if (!success) {
-			await attrs.syncManager.disableSync()
-			await Dialog.message("allowContactReadWrite_msg")
-			await attrs.mobileSystemFacade.goToSettings()
-		}
+		// TODO: fix in setup wizard story #7150
+		// attrs.syncManager.enableSync()
+		// const success = await attrs.syncManager.syncContacts()
+		// if (!success) {
+		// 	await attrs.syncManager.disableSync()
+		// 	await Dialog.message("allowContactReadWrite_msg")
+		// 	await attrs.mobileSystemFacade.goToSettings()
+		// }
 	}
 }
 
@@ -45,8 +49,8 @@ export class SetupContactsPageAttrs implements WizardPageAttrs<null> {
 	data: null = null
 
 	constructor(
-		public readonly syncManager: NativeContactsSyncManager,
-		public readonly contactImporter: ContactImporter,
+		public readonly syncManager: NativeContactsSyncManager | null,
+		public readonly contactImporter: ContactImporter | null,
 		public readonly mobileSystemFacade: MobileSystemFacade,
 	) {}
 

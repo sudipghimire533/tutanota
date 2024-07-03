@@ -28,6 +28,7 @@ import { AppHeaderAttrs } from "../common/gui/Header.js"
 import { CalendarViewModel } from "./calendar/view/CalendarViewModel.js"
 import { LoginController } from "../common/api/main/LoginController.js"
 import { SearchViewModel } from "../mail-app/search/view/SearchViewModel.js"
+import { calendarLocator } from "./calendarLocator.js"
 
 assertMainOrNodeBoot()
 bootFinished()
@@ -73,9 +74,11 @@ import("../mail-app/translations/en.js")
 
 		// do this after lang initialized
 
-		// FIXME: need to split locator?
 		const { locator } = await import("../common/api/main/MainLocator.js")
 		await locator.init()
+
+		const { calendarLocator } = await import("./calendarLocator.js")
+		await calendarLocator.init()
 
 		// FIXME: need to split navShortcuts?
 		const { setupNavShortcuts } = await import("../common/misc/NavShortcuts.js")
@@ -130,6 +133,7 @@ import("../mail-app/translations/en.js")
 
 						const { LoginView } = await import("../common/login/LoginView.js")
 						const makeViewModel = await locator.loginViewModelFactory()
+						makeViewModel().setCredentialRemovalHandler(await calendarLocator.credentialsRemovalHandler())
 						return {
 							component: LoginView,
 							cache: {

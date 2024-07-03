@@ -10,6 +10,7 @@ import { Dialog } from "../../gui/base/Dialog.js"
 import { FileReference } from "../../api/common/utils/FileUtils.js"
 import { AttachmentType, getAttachmentType } from "../../gui/AttachmentBubble.js"
 import { showRequestPasswordDialog } from "../../misc/passwords/PasswordRequestDialog.js"
+import { IMailLocator } from "../../../mail-app/mailLocator.js"
 
 export class WebCommonNativeFacade implements CommonNativeFacade {
 	/**
@@ -179,7 +180,7 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	private async parseContacts(fileList: FileReference[]) {
-		const { fileApp, logins, fileController } = await WebCommonNativeFacade.getInitializedLocator()
+		const { fileApp, logins } = await WebCommonNativeFacade.getInitializedLocator()
 
 		await logins.waitForPartialLogin()
 
@@ -204,8 +205,10 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	 * @param filesUris List of files URI to be parsed
 	 */
 	async handleFileImport(filesUris: ReadonlyArray<string>): Promise<void> {
-		const { fileApp, contactModel, contactImporter } = await WebCommonNativeFacade.getInitializedLocator()
-		const importer = await contactImporter()
+		// FIXME: contactImporter is no longer in locator, may need to split CommonNativeFacade into
+		// mail and calendar
+		const { fileApp, contactModel } = await WebCommonNativeFacade.getInitializedLocator()
+		// FIXME: const importer = await contactImporter()
 
 		// For now, we just handle .vcf files, so we don't need to care about the file type
 		const files = await fileApp.getFilesMetaData(filesUris)
@@ -213,6 +216,6 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 		const vCardData = contacts.join("\n")
 		const contactListId = assertNotNull(await contactModel.getContactListId())
 
-		await importer.importContactsFromFile(vCardData, contactListId)
+		// FIXME: await importer.importContactsFromFile(vCardData, contactListId)
 	}
 }
