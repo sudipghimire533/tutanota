@@ -281,7 +281,7 @@ export class LoginController {
 	async retryAsyncLogin() {
 		const loginFacade = await this.getLoginFacade()
 		const locator = await this.getMainLocator()
-		locator.loginListener.onRetryLogin()
+		this.loginListener.onRetryLogin()
 		await loginFacade.retryAsyncLogin()
 	}
 }

@@ -10,13 +10,13 @@ import { compareOldestFirst, getEtId } from "../api/common/utils/EntityUtils.js"
 import type { SearchFacade } from "../api/worker/search/SearchFacade.js"
 import { assertMainOrNode } from "../api/common/Env.js"
 import { LoginIncompleteError } from "../api/common/error/LoginIncompleteError.js"
-import { cleanMailAddress } from "../api/common/utils/CommonCalendarUtils.js"
 import { Group, GroupInfo, GroupInfoTypeRef, GroupMembership, GroupTypeRef } from "../api/entities/sys/TypeRefs.js"
 import { EntityEventsListener, EventController } from "../api/main/EventController.js"
 import Stream from "mithril/stream"
 import stream from "mithril/stream"
 import { ShareCapability } from "../api/common/TutanotaConstants.js"
 import { EntityUpdateData } from "../api/common/utils/EntityUpdateUtils.js"
+import { cleanMailAddress } from "../calendarFunctionality/commonCalendarUtils.js"
 
 assertMainOrNode()
 

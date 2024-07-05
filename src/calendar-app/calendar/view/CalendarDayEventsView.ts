@@ -1,7 +1,7 @@
 import m, { ChildArray, Children, Component, Vnode } from "mithril"
 import { px, size } from "../../../common/gui/size"
 import { DAY_IN_MILLIS, downcast, getEndOfDay, getStartOfDay, mapNullable, neverNull, numberRange } from "@tutao/tutanota-utils"
-import { eventEndsAfterDay, eventStartsBefore, getTimeTextFormatForLongEvent, getTimeZone, hasAlarmsForTheUser } from "../date/CalendarUtils"
+import { eventEndsAfterDay, eventStartsBefore, getTimeTextFormatForLongEvent, hasAlarmsForTheUser } from "../date/CalendarUtils"
 import { CalendarEventBubble } from "./CalendarEventBubble"
 import type { CalendarEvent } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { Time } from "../date/Time.js"
@@ -20,6 +20,7 @@ import type { GroupColors } from "./CalendarView"
 import { styles } from "../../../common/gui/styles"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import { CalendarTimeIndicator } from "./CalendarTimeIndicator.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export type Attrs = {
 	onEventClicked: CalendarEventBubbleClickHandler

@@ -52,11 +52,11 @@ import { NotAuthorizedError, NotFoundError } from "../../../../../src/common/api
 import { EphemeralCacheStorage } from "../../../../../src/common/api/worker/rest/EphemeralCacheStorage.js"
 import { GroupType, OperationType } from "../../../../../src/common/api/common/TutanotaConstants.js"
 import { OfflineStorageMigrator } from "../../../../../src/common/api/worker/offline/OfflineStorageMigrator.js"
-import { createEventElementId } from "../../../../../src/common/api/common/utils/CommonCalendarUtils.js"
 import { InterWindowEventFacadeSendDispatcher } from "../../../../../src/common/native/common/generatedipc/InterWindowEventFacadeSendDispatcher.js"
 import { func, instance, matchers, object, replace, when } from "testdouble"
 import { SqlCipherFacade } from "../../../../../src/common/native/common/generatedipc/SqlCipherFacade.js"
 import { createTestEntity } from "../../../TestUtils.js"
+import { createEventElementId } from "../../../../../src/common/calendarFunctionality/commonCalendarUtils.js"
 
 const { anything } = matchers
 

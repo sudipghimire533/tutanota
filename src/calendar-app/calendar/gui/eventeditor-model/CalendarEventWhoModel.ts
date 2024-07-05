@@ -9,7 +9,6 @@ import {
 } from "../../../../common/api/entities/tutanota/TypeRefs.js"
 import { PartialRecipient, Recipient, RecipientType } from "../../../../common/api/common/recipients/Recipient.js"
 import { haveSameId, Stripped } from "../../../../common/api/common/utils/EntityUtils.js"
-import { cleanMailAddress, findRecipientWithAddress } from "../../../../common/api/common/utils/CommonCalendarUtils.js"
 import { getContactDisplayName } from "../../../../common/contactsFunctionality/ContactUtils.js"
 import { assertNotNull, clone, defer, DeferredObject, findAll, lazy, noOp, trisectingDiff } from "@tutao/tutanota-utils"
 import { CalendarAttendeeStatus, ConversationType, ShareCapability } from "../../../../common/api/common/TutanotaConstants.js"
@@ -17,7 +16,7 @@ import { RecipientsModel, ResolveMode } from "../../../../common/api/main/Recipi
 import { Guest } from "../../view/CalendarInvites.js"
 import { isSecurePassword } from "../../../../common/misc/passwords/PasswordUtils.js"
 import { SendMailModel } from "../../../../common/mailFunctionality/SendMailModel.js"
-import { CalendarInfo } from "../../model/CalendarModel.js"
+import { CalendarInfo } from "../../../../common/calendarFunctionality/CalendarModel.js"
 import { hasCapabilityOnGroup } from "../../../../common/sharing/GroupUtils.js"
 import { UserController } from "../../../../common/api/main/UserController.js"
 import { UserError } from "../../../../common/api/main/UserError.js"
@@ -25,6 +24,7 @@ import { CalendarOperation, EventType } from "./CalendarEventModel.js"
 import { ProgrammingError } from "../../../../common/api/common/error/ProgrammingError.js"
 import { CalendarNotificationSendModels } from "./CalendarNotificationModel.js"
 import { RecipientField } from "../../../../common/mailFunctionality/CommonMailUtils.js"
+import { cleanMailAddress, findRecipientWithAddress } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 /** there is no point in returning recipients, the SendMailModel will re-resolve them anyway. */
 type AttendanceModelResult = {

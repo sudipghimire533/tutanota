@@ -4,7 +4,6 @@ import {
 	downcast,
 	filterInt,
 	findAllAndRemove,
-	findAndRemove,
 	getFirstOrThrow,
 	getFromMap,
 	getStartOfDay,
@@ -17,31 +16,23 @@ import {
 	TIMESTAMP_ZERO_YEAR,
 } from "@tutao/tutanota-utils"
 import { EndType, EventTextTimeOption, getWeekStart, RepeatPeriod, TimeFormat, WeekStart } from "../../../common/api/common/TutanotaConstants"
-import { DateTime, DurationLikeObject, FixedOffsetZone, IANAZone } from "luxon"
+import { DateTime } from "luxon"
 import {
 	CalendarEvent,
 	CalendarEventTypeRef,
-	CalendarGroupRoot,
 	CalendarRepeatRule,
 	createCalendarRepeatRule,
 	UserSettingsGroupRoot,
 } from "../../../common/api/entities/tutanota/TypeRefs.js"
-import {
-	CalendarEventTimes,
-	DAYS_SHIFTED_MS,
-	generateEventElementId,
-	isAllDayEvent,
-	isAllDayEventByTimes,
-} from "../../../common/api/common/utils/CommonCalendarUtils"
 import type { RepeatRule } from "../../../common/api/entities/sys/TypeRefs.js"
 import { createDateWrapper, DateWrapper, User } from "../../../common/api/entities/sys/TypeRefs.js"
 import { isSameId } from "../../../common/api/common/utils/EntityUtils"
 import type { Time } from "./Time.js"
-import type { CalendarInfo } from "../model/CalendarModel"
-import { DateProvider } from "../../../common/api/common/DateProvider"
 import { EntityClient } from "../../../common/api/common/EntityClient.js"
 import { CalendarEventUidIndexEntry } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
-import { ParserError } from "../../../common/misc/parsing/ParserCombinator.js"
+import { getEventEnd, getEventStart, isAllDayEvent } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone, getValidTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { assertDateIsValid, getAllDayDateForTimezone } from "../../../common/calendarFunctionality/CommonDateUtils.js"
 
 export type CalendarTimeRange = {
 	start: number
@@ -138,24 +129,6 @@ export function getEndOfDayWithZone(date: Date, zone: string): Date {
 	return DateTime.fromJSDate(date, { zone }).set({ hour: 23, minute: 59, second: 59, millisecond: 0 }).toJSDate()
 }
 
-export function calculateAlarmTime(date: Date, interval: AlarmInterval, ianaTimeZone?: string): Date {
-	const diff = alarmIntervalToLuxonDurationLikeObject(interval)
-
-	return DateTime.fromJSDate(date, {
-		zone: ianaTimeZone,
-	})
-		.minus(diff)
-		.toJSDate()
-}
-
-/** takes a date which encodes the day in UTC and produces a date that encodes the same date but in local time zone. All times must be 0. */
-export function getAllDayDateForTimezone(utcDate: Date, zone: string): Date {
-	return DateTime.fromJSDate(utcDate, { zone: "utc" })
-		.setZone(zone, { keepLocalTime: true })
-		.set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-		.toJSDate()
-}
-
 export function incrementByRepeatPeriod(date: Date, repeatPeriod: RepeatPeriod, interval: number, ianaTimeZone: string): Date {
 	switch (repeatPeriod) {
 		case RepeatPeriod.DAILY:
@@ -196,35 +169,6 @@ export function incrementByRepeatPeriod(date: Date, repeatPeriod: RepeatPeriod, 
 
 		default:
 			throw new Error("Unknown repeat period")
-	}
-}
-
-export function getValidTimeZone(zone: string, fallback?: string): string {
-	if (IANAZone.isValidZone(zone)) {
-		return zone
-	} else {
-		if (fallback && IANAZone.isValidZone(fallback)) {
-			console.warn(`Time zone ${zone} is not valid, falling back to ${fallback}`)
-			return fallback
-		} else {
-			const actualFallback = FixedOffsetZone.instance(new Date().getTimezoneOffset()).name
-			console.warn(`Fallback time zone ${zone} is not valid, falling back to ${actualFallback}`)
-			return actualFallback
-		}
-	}
-}
-
-export function getTimeZone(): string {
-	return DateTime.local().zoneName
-}
-
-export class DefaultDateProvider implements DateProvider {
-	now(): number {
-		return Date.now()
-	}
-
-	timeZone(): string {
-		return getTimeZone()
 	}
 }
 
@@ -312,44 +256,10 @@ export function getWeekNumber(startOfTheWeek: Date): number {
 	return DateTime.fromJSDate(startOfTheWeek).weekNumber
 }
 
-export function getEventEnd(event: CalendarEventTimes, timeZone: string): Date {
-	if (isAllDayEvent(event)) {
-		return getAllDayDateForTimezone(event.endTime, timeZone)
-	} else {
-		return event.endTime
-	}
-}
-
-export function getEventStart({ startTime, endTime }: CalendarEventTimes, timeZone: string): Date {
-	return getEventStartByTimes(startTime, endTime, timeZone)
-}
-
-export function getEventStartByTimes(startTime: Date, endTime: Date, timeZone: string): Date {
-	if (isAllDayEventByTimes(startTime, endTime)) {
-		return getAllDayDateForTimezone(startTime, timeZone)
-	} else {
-		return startTime
-	}
-}
-
 /** @param date encodes some calendar date in {@param zone} (like the 1st of May 2023)
  * @returns {Date} encodes the same calendar date in UTC */
 export function getAllDayDateUTCFromZone(date: Date, zone: string): Date {
 	return DateTime.fromJSDate(date, { zone }).setZone("utc", { keepLocalTime: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toJSDate()
-}
-
-export function isLongEvent(event: CalendarEvent, zone: string): boolean {
-	// long events are longer than the event ID randomization range. we need to distinguish them
-	// to be able to still load and display the ones overlapping the query range even though their
-	// id might not be contained in the query timerange +- randomization range.
-	// this also applies to events that repeat.
-	return event.repeatRule != null || getEventEnd(event, zone).getTime() - getEventStart(event, zone).getTime() > DAYS_SHIFTED_MS
-}
-
-/** create an event id depending on the calendar it is in and on its length */
-export function assignEventId(event: CalendarEvent, zone: string, groupRoot: CalendarGroupRoot): void {
-	const listId = isLongEvent(event, zone) ? groupRoot.longEvents : groupRoot.shortEvents
-	event._id = [listId, generateEventElementId(event.startTime.getTime())]
 }
 
 /** predicate that tells us if two CalendarEvent objects refer to the same instance or different ones.*/
@@ -366,12 +276,6 @@ export function hasAlarmsForTheUser(user: User, event: CalendarEvent): boolean {
 
 function eventComparator(l: CalendarEvent, r: CalendarEvent): number {
 	return l.startTime.getTime() - r.startTime.getTime()
-}
-
-function assertDateIsValid(date: Date) {
-	if (!isValidDate(date)) {
-		throw new Error("Date is invalid!")
-	}
 }
 
 /**
@@ -730,47 +634,6 @@ export type AlarmOccurrence = {
 	eventTime: Date
 }
 
-export function findNextAlarmOccurrence(
-	now: Date,
-	timeZone: string,
-	eventStart: Date,
-	eventEnd: Date,
-	frequency: RepeatPeriod,
-	interval: number,
-	endType: EndType,
-	endValue: number,
-	exclusions: Array<Date>,
-	alarmTrigger: AlarmInterval,
-	localTimeZone: string,
-): AlarmOccurrence | null {
-	let occurrenceNumber = 0
-	const isAllDayEvent = isAllDayEventByTimes(eventStart, eventEnd)
-	const calcEventStart = isAllDayEvent ? getAllDayDateForTimezone(eventStart, localTimeZone) : eventStart
-	assertDateIsValid(calcEventStart)
-	const endDate = endType === EndType.UntilDate ? (isAllDayEvent ? getAllDayDateForTimezone(new Date(endValue), localTimeZone) : new Date(endValue)) : null
-
-	while (endType !== EndType.Count || occurrenceNumber < endValue) {
-		const occurrenceDate = incrementByRepeatPeriod(calcEventStart, frequency, interval * occurrenceNumber, isAllDayEvent ? localTimeZone : timeZone)
-		if (endDate && occurrenceDate.getTime() >= endDate.getTime()) {
-			return null
-		}
-
-		if (!exclusions.some((d) => d.getTime() === occurrenceDate.getTime())) {
-			const alarmTime = calculateAlarmTime(occurrenceDate, alarmTrigger, localTimeZone)
-
-			if (alarmTime >= now) {
-				return {
-					alarmTime,
-					occurrenceNumber: occurrenceNumber,
-					eventTime: occurrenceDate,
-				}
-			}
-		}
-		occurrenceNumber++
-	}
-	return null
-}
-
 /** */
 export type CalendarDay = {
 	date: Date
@@ -803,16 +666,6 @@ export function incrementSequence(sequence: string): string {
 	const current = filterInt(sequence) || 0
 	// Only the organizer should increase sequence numbers
 	return String(current + 1)
-}
-
-export function findPrivateCalendar(calendarInfo: ReadonlyMap<Id, CalendarInfo>): CalendarInfo | null {
-	for (const calendar of calendarInfo.values()) {
-		if (!calendar.shared) {
-			return calendar
-		}
-	}
-
-	return null
 }
 
 /**
@@ -951,19 +804,6 @@ export function serializeAlarmInterval(interval: AlarmInterval): string {
 	return `${interval.value}${interval.unit}`
 }
 
-export function alarmIntervalToLuxonDurationLikeObject(alarmInterval: AlarmInterval): DurationLikeObject {
-	switch (alarmInterval.unit) {
-		case AlarmIntervalUnit.MINUTE:
-			return { minutes: alarmInterval.value }
-		case AlarmIntervalUnit.HOUR:
-			return { hours: alarmInterval.value }
-		case AlarmIntervalUnit.DAY:
-			return { days: alarmInterval.value }
-		case AlarmIntervalUnit.WEEK:
-			return { weeks: alarmInterval.value }
-	}
-}
-
 /**
  * compare two lists of dates that are sorted from earliest to latest. return true if they are equivalent.
  */
@@ -982,22 +822,4 @@ export function areRepeatRulesEqual(r1: CalendarRepeatRule | null, r2: CalendarR
 			/** r1?.timeZone === r2?.timeZone && we're ignoring time zone because it's not an observable change. */
 			areExcludedDatesEqual(r1?.excludedDates ?? [], r2?.excludedDates ?? []))
 	)
-}
-
-/**
- * Converts db representation of alarm to a runtime one.
- */
-export function parseAlarmInterval(serialized: string): AlarmInterval {
-	const matched = serialized.match(/^(\d+)([MHDW])$/)
-	if (matched) {
-		const [_, digits, unit] = matched
-		const value = filterInt(digits)
-		if (isNaN(value)) {
-			throw new ParserError(`Invalid value: ${value}`)
-		} else {
-			return { value, unit: unit as AlarmIntervalUnit }
-		}
-	} else {
-		throw new ParserError(`Invalid alarm interval: ${serialized}`)
-	}
 }

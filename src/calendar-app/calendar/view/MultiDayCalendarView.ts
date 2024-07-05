@@ -6,13 +6,10 @@ import {
 	eventEndsAfterDay,
 	eventStartsBefore,
 	getDiffIn24hIntervals,
-	getEventEnd,
-	getEventStart,
 	getRangeOfDays,
 	getStartOfTheWeekOffset,
 	getStartOfWeek,
 	getTimeTextFormatForLongEvent,
-	getTimeZone,
 } from "../date/CalendarUtils"
 import { CalendarDayEventsView, calendarDayTimes } from "./CalendarDayEventsView"
 import { theme } from "../../../common/gui/theme"
@@ -39,11 +36,12 @@ import {
 } from "../gui/CalendarGuiUtils.js"
 import type { CalendarEventBubbleClickHandler, CalendarEventBubbleKeyDownHandler, EventsOnDays } from "./CalendarViewModel"
 import { ContinuingCalendarEventBubble } from "./ContinuingCalendarEventBubble"
-import { isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import { DateTime } from "luxon"
 import { Time } from "../date/Time.js"
 import { DaySelector } from "../gui/day-selector/DaySelector.js"
+import { getTimeZone, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getEventEnd, getEventStart } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 export type MultiDayCalendarViewAttrs = {
 	selectedDate: Date

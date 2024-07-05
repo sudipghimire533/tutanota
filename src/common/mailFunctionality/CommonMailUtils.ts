@@ -519,3 +519,10 @@ export function isSubfolderOfType(system: FolderSystem, folder: MailFolder, type
 	const systemFolder = system.getSystemFolderByType(type)
 	return systemFolder != null && system.checkFolderForAncestor(folder, systemFolder._id)
 }
+
+/**
+ * return a cleaned and comparable version of a mail address without leading/trailing whitespace or uppercase characters.
+ */
+export function cleanMailAddress(address: string): string {
+	return address.trim().toLowerCase()
+}

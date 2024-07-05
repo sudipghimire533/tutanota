@@ -13,7 +13,7 @@ import { resolveTypeReference } from "../../common/api/common/EntityFunctions"
 import { EncryptedAlarmNotification } from "../../common/native/common/EncryptedAlarmNotification.js"
 import { base64ToUint8Array } from "@tutao/tutanota-utils"
 import { CryptoError } from "@tutao/tutanota-crypto/error.js"
-import { formatNotificationForDisplay } from "../../calendar-app/calendar/model/CalendarModel.js"
+import { formatNotificationForDisplay } from "../../common/calendarFunctionality/CalendarModel.js"
 import { hasError } from "../../common/api/common/utils/ErrorUtils.js"
 
 export interface NativeAlarmScheduler {

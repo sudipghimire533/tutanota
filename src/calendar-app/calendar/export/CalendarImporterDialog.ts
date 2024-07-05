@@ -1,7 +1,6 @@
 import type { CalendarEvent, CalendarGroupRoot } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { CalendarEventTypeRef, createFile } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { CALENDAR_MIME_TYPE, showFileChooser } from "../../../common/file/FileController"
-import { generateEventElementId } from "../../../common/api/common/utils/CommonCalendarUtils"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog"
 import { ParserError } from "../../../common/misc/parsing/ParserCombinator"
 import { Dialog } from "../../../common/gui/base/Dialog"
@@ -14,10 +13,11 @@ import { createDateWrapper, UserAlarmInfoTypeRef } from "../../../common/api/ent
 import { convertToDataFile } from "../../../common/api/common/DataFile"
 import { locator } from "../../../common/api/main/MainLocator"
 import { getFromMap, groupBy, insertIntoSortedArray, ofClass, promiseMap, stringToUtf8Uint8Array } from "@tutao/tutanota-utils"
-import { assignEventId, CalendarEventValidity, checkEventValidity, getTimeZone } from "../date/CalendarUtils"
+import { CalendarEventValidity, checkEventValidity } from "../date/CalendarUtils"
 import { ImportError } from "../../../common/api/common/error/ImportError"
 import { TranslationKeyType } from "../../../common/misc/TranslationKey"
 import { AlarmInfoTemplate } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
+import { assignEventId, generateEventElementId, getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export const enum EventImportRejectionReason {
 	Pre1970,

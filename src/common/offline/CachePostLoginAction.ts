@@ -1,5 +1,5 @@
 import { PostLoginAction, LoggedInEvent, LoginController } from "../api/main/LoginController.js"
-import { CalendarModel } from "../../calendar-app/calendar/model/CalendarModel.js"
+import { CalendarModel } from "../calendarFunctionality/CalendarModel.js"
 import { CalendarEventTypeRef } from "../api/entities/tutanota/TypeRefs.js"
 import { CUSTOM_MIN_ID } from "../api/common/utils/EntityUtils.js"
 import { EntityClient } from "../api/common/EntityClient.js"

@@ -8,7 +8,6 @@ import { theme } from "../../../../common/gui/theme.js"
 
 import { getStartOfDay, isSameDayOfDate } from "@tutao/tutanota-utils"
 import { DateTime } from "luxon"
-import { getAllDayDateLocal } from "../../../../common/api/common/utils/CommonCalendarUtils.js"
 import { TextField } from "../../../../common/gui/base/TextField.js"
 import type { CalendarDay } from "../../date/CalendarUtils.js"
 import { parseDate } from "../../../../common/misc/DateParser.js"
@@ -17,6 +16,7 @@ import { getCalendarMonth } from "../CalendarGuiUtils.js"
 import { isKeyPressed, keyboardEventToKeyPress, keyHandler, KeyPress, useKeyHandler } from "../../../../common/misc/KeyManager.js"
 import { Keys, TabIndex } from "../../../../common/api/common/TutanotaConstants.js"
 import { AriaPopupType } from "../../../../common/gui/AriaUtils.js"
+import { getAllDayDateLocal } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export interface DatePickerAttrs {
 	date: Date

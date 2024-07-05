@@ -1,12 +1,9 @@
-import { CalendarEventTimes, getAllDayDateUTC, getEventWithDefaultTimes, isAllDayEvent } from "../../../../common/api/common/utils/CommonCalendarUtils.js"
 import { Time } from "../../date/Time.js"
 import { DateTime, DurationLikeObject } from "luxon"
 import {
 	areExcludedDatesEqual,
 	areRepeatRulesEqual,
 	getAllDayDateUTCFromZone,
-	getEventEnd,
-	getEventStart,
 	getRepeatEndTimeForDisplay,
 	getStartOfDayWithZone,
 	getStartOfNextDayWithZone,
@@ -18,6 +15,14 @@ import { Stripped } from "../../../../common/api/common/utils/EntityUtils.js"
 import { EndType, RepeatPeriod } from "../../../../common/api/common/TutanotaConstants.js"
 import { createDateWrapper, createRepeatRule, RepeatRule } from "../../../../common/api/entities/sys/TypeRefs.js"
 import { UserError } from "../../../../common/api/main/UserError.js"
+import {
+	CalendarEventTimes,
+	getEventEnd,
+	getEventStart,
+	getEventWithDefaultTimes,
+	isAllDayEvent,
+} from "../../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getAllDayDateUTC } from "../../../../common/calendarFunctionality/CommonDateUtils.js"
 
 export type CalendarEventWhenModelResult = CalendarEventTimes & {
 	repeatRule: CalendarRepeatRule | null

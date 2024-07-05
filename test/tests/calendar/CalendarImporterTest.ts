@@ -16,13 +16,13 @@ import {
 import { DateTime } from "luxon"
 import { AlarmInfo, AlarmInfoTypeRef, DateWrapperTypeRef, RepeatRuleTypeRef, UserAlarmInfoTypeRef } from "../../../src/common/api/entities/sys/TypeRefs.js"
 import { CalendarAttendeeStatus, EndType, RepeatPeriod } from "../../../src/common/api/common/TutanotaConstants.js"
-import { getAllDayDateUTC } from "../../../src/common/api/common/utils/CommonCalendarUtils.js"
 import { getAllDayDateUTCFromZone } from "../../../src/calendar-app/date/CalendarUtils.js"
 import { EventImportRejectionReason, sortOutParsedEvents } from "../../../src/calendar-app/export/CalendarImporterDialog.js"
 import { getDateInZone } from "./CalendarTestUtils.js"
 import { Require } from "@tutao/tutanota-utils"
 import { parseCalendarStringData } from "../../../src/calendar-app/export/CalendarImporter.js"
 import { createTestEntity } from "../TestUtils.js"
+import { getAllDayDateUTC } from "../../../src/common/calendarFunctionality/commonCalendarUtils.js"
 
 const zone = "Europe/Berlin"
 const now = new Date("2019-08-13T14:01:00.630Z")

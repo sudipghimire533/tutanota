@@ -31,7 +31,6 @@ import { DateWrapperTypeRef, GroupMembershipTypeRef, GroupTypeRef, User, UserTyp
 import { AccountType, EndType, GroupType, RepeatPeriod, ShareCapability } from "../../../src/common/api/common/TutanotaConstants.js"
 import { timeStringFromParts } from "../../../src/common/misc/Formatter.js"
 import { DateTime } from "luxon"
-import { generateEventElementId, getAllDayDateUTC } from "../../../src/common/api/common/utils/CommonCalendarUtils.js"
 import { hasCapabilityOnGroup } from "../../../src/sharing/GroupUtils.js"
 import type { CalendarEvent } from "../../../src/common/api/entities/tutanota/TypeRefs.js"
 import {
@@ -52,6 +51,7 @@ import { ParserError } from "../../../src/common/misc/parsing/ParserCombinator.j
 import { createTestEntity } from "../TestUtils.js"
 
 import { getCalendarMonth, getEventType } from "../../../src/calendar-app/gui/CalendarGuiUtils.js"
+import { generateEventElementId, getAllDayDateUTC } from "../../../src/common/calendarFunctionality/commonCalendarUtils.js"
 
 const zone = "Europe/Berlin"
 

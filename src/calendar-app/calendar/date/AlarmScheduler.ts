@@ -3,8 +3,14 @@ import { downcast } from "@tutao/tutanota-utils"
 import { EndType } from "../../../common/api/common/TutanotaConstants.js"
 import type { AlarmInfo, RepeatRule } from "../../../common/api/entities/sys/TypeRefs.js"
 import type { ScheduledTimeoutId, Scheduler } from "../../../common/api/common/utils/Scheduler.js"
-import { calculateAlarmTime, findNextAlarmOccurrence, getEventStartByTimes, getValidTimeZone, parseAlarmInterval } from "./CalendarUtils.js"
 import { DateProvider } from "../../../common/api/common/DateProvider.js"
+import {
+	calculateAlarmTime,
+	findNextAlarmOccurrence,
+	getEventStartByTimes,
+	parseAlarmInterval,
+} from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getValidTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
 
 type NotificationSender = (eventTime: Date, summary: string) => void
 type EventInfo = {

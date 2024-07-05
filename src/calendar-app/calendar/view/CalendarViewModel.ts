@@ -9,11 +9,10 @@ import type { ReceivedGroupInvitation } from "../../../common/api/entities/sys/T
 import stream from "mithril/stream"
 import Stream from "mithril/stream"
 import { getDiffIn60mIntervals, getMonthRange, isEventBetweenDays } from "../date/CalendarUtils"
-import { isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils"
 import { CalendarEventModel, CalendarOperation, EventSaveResult, EventType, getNonOrganizerAttendees } from "../gui/eventeditor-model/CalendarEventModel.js"
 import { askIfShouldSendCalendarUpdatesToAttendees, getEventType, shouldDisplayEvent } from "../gui/CalendarGuiUtils.js"
 import { ReceivedGroupInvitationsModel } from "../../../common/sharing/model/ReceivedGroupInvitationsModel"
-import type { CalendarInfo, CalendarModel } from "../model/CalendarModel"
+import type { CalendarInfo, CalendarModel } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { EventController } from "../../../common/api/main/EventController"
 import { EntityClient } from "../../../common/api/common/EntityClient"
 import { ProgressTracker } from "../../../common/api/main/ProgressTracker"
@@ -26,6 +25,7 @@ import { CalendarEventPreviewViewModel } from "../gui/eventpopup/CalendarEventPr
 import { EntityUpdateData, isUpdateFor, isUpdateForTypeRef } from "../../../common/api/common/utils/EntityUpdateUtils.js"
 import { MailModel } from "../../../common/mailFunctionality/MailModel.js"
 import { getEnabledMailAddressesWithUser } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export type EventsOnDays = {
 	days: Array<Date>

@@ -1,9 +1,9 @@
 import type { CalendarEvent } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import m from "mithril"
-import { getAllDayDateUTC, isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils"
 import { Time } from "../date/Time.js"
 import { showDropdownAtPosition } from "../../../common/gui/base/Dropdown.js"
 import { CalendarOperation } from "../gui/eventeditor-model/CalendarEventModel.js"
+import { getAllDayDateUTC, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 const DRAG_THRESHOLD = 10
 export type MousePos = {

@@ -2,8 +2,7 @@ import type { CalendarAttendeeStatus, CalendarMethod } from "../../../common/api
 import { assertEnumValue, EndType, RepeatPeriod, SECOND_MS } from "../../../common/api/common/TutanotaConstants"
 import { assertNotNull, downcast, incrementDate, mapAndFilterNull, neverNull, pad, stringToUtf8Uint8Array } from "@tutao/tutanota-utils"
 import { calendarAttendeeStatusToParstat, iCalReplacements, repeatPeriodToIcalFrequency } from "./CalendarParser"
-import { getAllDayDateLocal, isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils"
-import { AlarmIntervalUnit, generateUid, getTimeZone, parseAlarmInterval } from "../date/CalendarUtils"
+import { AlarmIntervalUnit, generateUid } from "../date/CalendarUtils"
 import type { CalendarEvent } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { createFile } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { convertToDataFile, DataFile } from "../../../common/api/common/DataFile"
@@ -11,6 +10,8 @@ import type { DateWrapper, RepeatRule, UserAlarmInfo } from "../../../common/api
 import { DateTime } from "luxon"
 import { CALENDAR_MIME_TYPE } from "../../../common/file/FileController"
 import { getLetId } from "../../../common/api/common/utils/EntityUtils"
+import { getAllDayDateLocal, getTimeZone, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { parseAlarmInterval } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 /** create an ical data file that can be attached to an invitation/update/cancellation/response mail */
 export function makeInvitationCalendarFile(event: CalendarEvent, method: CalendarMethod, now: Date, zone: string): DataFile {

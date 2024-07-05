@@ -5,12 +5,11 @@ import { AllIcons, Icon } from "../../../../common/gui/base/Icon.js"
 import { theme } from "../../../../common/gui/theme.js"
 import { BootIcons } from "../../../../common/gui/base/icons/BootIcons.js"
 import { Icons } from "../../../../common/gui/base/icons/Icons.js"
-import { getRepeatEndTimeForDisplay, getTimeZone } from "../../date/CalendarUtils.js"
+import { getRepeatEndTimeForDisplay } from "../../date/CalendarUtils.js"
 import { CalendarAttendeeStatus, EndType, getAttendeeStatus, RepeatPeriod } from "../../../../common/api/common/TutanotaConstants.js"
 import { downcast, memoized } from "@tutao/tutanota-utils"
 import { lang, TranslationKey } from "../../../../common/misc/LanguageViewModel.js"
 import type { RepeatRule } from "../../../../common/api/entities/sys/TypeRefs.js"
-import { cleanMailAddress, findAttendeeInAddresses, isAllDayEvent } from "../../../../common/api/common/utils/CommonCalendarUtils.js"
 import { formatDateWithMonth } from "../../../../common/misc/Formatter.js"
 import { BannerButton, BannerButtonAttrs } from "../../../../common/gui/base/buttons/BannerButton.js"
 import { pureComponent } from "../../../../common/gui/base/PureComponent.js"
@@ -21,6 +20,7 @@ import { ExternalLink } from "../../../../common/gui/base/ExternalLink.js"
 
 import { createRepeatRuleFrequencyValues, formatEventDuration, iconForAttendeeStatus } from "../CalendarGuiUtils.js"
 import { hasError } from "../../../../common/api/common/utils/ErrorUtils.js"
+import { cleanMailAddress, findAttendeeInAddresses, getTimeZone, isAllDayEvent } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export type EventPreviewViewAttrs = {
 	event: Omit<CalendarEvent, "description">

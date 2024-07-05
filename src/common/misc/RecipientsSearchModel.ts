@@ -7,9 +7,9 @@ import { DbError } from "../api/common/error/DbError.js"
 import { locator } from "../api/main/MainLocator.js"
 import { ContactListEntryTypeRef, ContactTypeRef } from "../api/entities/tutanota/TypeRefs.js"
 import { LoginIncompleteError } from "../api/common/error/LoginIncompleteError.js"
-import { findRecipientWithAddress } from "../api/common/utils/CommonCalendarUtils.js"
 import { EntityClient } from "../api/common/EntityClient.js"
 import { ContactSuggestion } from "../native/common/generatedipc/ContactSuggestion.js"
+import { findRecipientWithAddress } from "../calendarFunctionality/commonCalendarUtils.js"
 
 const MaxNativeSuggestions = 10
 

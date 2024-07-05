@@ -58,11 +58,11 @@ import { createApprovalMail } from "../api/entities/monitor/TypeRefs.js"
 import { DateProvider } from "../api/common/DateProvider.js"
 import { getSenderName } from "../misc/MailboxPropertiesUtils.js"
 import { isLegacyMail, MailWrapper } from "../api/common/MailWrapper.js"
-import { cleanMailAddress, findRecipientWithAddress } from "../api/common/utils/CommonCalendarUtils.js"
 import { ProgrammingError } from "../api/common/error/ProgrammingError.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../api/common/utils/EntityUpdateUtils.js"
 import { cloneInlineImages, InlineImages, revokeInlineImages } from "./inlineImagesUtils.js"
 import { checkAttachmentSize, getDefaultSender, getTemplateLanguages, isUserEmail, RecipientField } from "./CommonMailUtils.js"
+import { cleanMailAddress, findRecipientWithAddress } from "../calendarFunctionality/commonCalendarUtils.js"
 
 assertMainOrNode()
 

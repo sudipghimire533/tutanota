@@ -32,7 +32,7 @@ export class SearchModel {
 	_lastSearchPromise: Promise<SearchResult | void>
 	cancelSignal: Stream<boolean>
 
-	constructor(searchFacade: SearchFacade, private readonly calendarModel: lazyAsync<CalendarEventsRepository>) {
+	constructor(searchFacade: SearchFacade, private readonly calendarModel: lazyAsync<CalendarEventsRepository | null>) {
 		this._searchFacade = searchFacade
 		this.result = stream()
 		this.lastQueryString = stream<string | null>("")
@@ -118,10 +118,10 @@ export class SearchModel {
 				return this._lastSearchPromise
 			}
 
-			await calendarModel.loadMonthsIfNeeded(daysInMonths, monitor, this.cancelSignal)
+			await calendarModel?.loadMonthsIfNeeded(daysInMonths, monitor, this.cancelSignal)
 			monitor.completed()
 
-			const eventsForDays = calendarModel.getEventsForMonths()()
+			const eventsForDays = calendarModel ? calendarModel.getEventsForMonths()() : []
 
 			assertNonNull(restriction.start)
 			assertNonNull(restriction.end)

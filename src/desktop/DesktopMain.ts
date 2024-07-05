@@ -55,7 +55,6 @@ import { SqlCipherFacade } from "../common/native/common/generatedipc/SqlCipherF
 import { lazyMemoized } from "@tutao/tutanota-utils"
 import dns from "node:dns"
 import { getConfigFile } from "./config/ConfigFile.js"
-import { DefaultDateProvider } from "../calendar-app/calendar/date/CalendarUtils.js"
 import { OfflineDbRefCounter } from "./db/OfflineDbRefCounter.js"
 import { WorkerSqlCipher } from "./db/WorkerSqlCipher.js"
 import { TempFs } from "./files/TempFs.js"
@@ -70,6 +69,7 @@ import { SseStorage } from "./sse/SseStorage.js"
 import { DesktopSseDelay } from "./sse/reconnectDelay.js"
 import { KeychainEncryption } from "./credentials/KeychainEncryption.js"
 import { Argon2IDExports } from "@tutao/tutanota-crypto"
+import { DefaultDateProvider } from "../common/calendarFunctionality/commonCalendarUtils.js"
 
 /**
  * Should be injected during build time.

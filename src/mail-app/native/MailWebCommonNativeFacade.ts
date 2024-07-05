@@ -1,18 +1,17 @@
-import { CommonNativeFacade } from "../common/generatedipc/CommonNativeFacade.js"
-import { IMainLocator, locator } from "../../api/main/MainLocator.js"
-import { TranslationKey } from "../../misc/LanguageViewModel.js"
+import { CommonNativeFacade } from "../../common/native/common/generatedipc/CommonNativeFacade.js"
+import { IMainLocator, locator } from "../../common/api/main/MainLocator.js"
+import { TranslationKey } from "../../common/misc/LanguageViewModel.js"
 import { assertNotNull, noOp, ofClass } from "@tutao/tutanota-utils"
-import { CancelledError } from "../../api/common/error/CancelledError.js"
-import { UserError } from "../../api/main/UserError.js"
-import { themeController } from "../../gui/theme.js"
+import { CancelledError } from "../../common/api/common/error/CancelledError.js"
+import { UserError } from "../../common/api/main/UserError.js"
+import { themeController } from "../../common/gui/theme.js"
 import m from "mithril"
-import { Dialog } from "../../gui/base/Dialog.js"
-import { FileReference } from "../../api/common/utils/FileUtils.js"
-import { AttachmentType, getAttachmentType } from "../../gui/AttachmentBubble.js"
-import { showRequestPasswordDialog } from "../../misc/passwords/PasswordRequestDialog.js"
-import { IMailLocator } from "../../../mail-app/mailLocator.js"
+import { Dialog } from "../../common/gui/base/Dialog.js"
+import { FileReference } from "../../common/api/common/utils/FileUtils.js"
+import { AttachmentType, getAttachmentType } from "../../common/gui/AttachmentBubble.js"
+import { showRequestPasswordDialog } from "../../common/misc/passwords/PasswordRequestDialog.js"
 
-export class WebCommonNativeFacade implements CommonNativeFacade {
+export class MailWebCommonNativeFacade implements CommonNativeFacade {
 	/**
 	 * create a mail editor as requested from the native side, ie because a
 	 * mailto-link was clicked or the "Send as mail" option
@@ -30,9 +29,9 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 		subject: string,
 		mailToUrlString: string,
 	): Promise<void> {
-		const { fileApp, mailModel, logins } = await WebCommonNativeFacade.getInitializedLocator()
-		const { newMailEditorFromTemplate, newMailtoUrlMailEditor } = await import("../../../mail-app/mail/editor/MailEditor.js")
-		const signatureModule = await import("../../../mail-app/mail/signature/Signature")
+		const { fileApp, mailModel, logins } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { newMailEditorFromTemplate, newMailtoUrlMailEditor } = await import("../mail/editor/MailEditor.js")
+		const signatureModule = await import("../mail/signature/Signature.js")
 		await logins.waitForPartialLogin()
 		const mailboxDetails = await mailModel.getUserMailboxDetails()
 		let editor
@@ -96,12 +95,12 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	async invalidateAlarms(): Promise<void> {
-		const locator = await WebCommonNativeFacade.getInitializedLocator()
+		const locator = await MailWebCommonNativeFacade.getInitializedLocator()
 		await locator.pushService.reRegister()
 	}
 
 	async openCalendar(userId: string): Promise<void> {
-		const { openCalendar } = await import("./OpenMailboxHandler.js")
+		const { openCalendar } = await import("../../common/native/main/OpenCalendarHandler.js")
 		return openCalendar(userId)
 	}
 
@@ -111,7 +110,7 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	async showAlertDialog(translationKey: string): Promise<void> {
-		const { Dialog } = await import("../../gui/base/Dialog.js")
+		const { Dialog } = await import("../../common/gui/base/Dialog.js")
 		return Dialog.message(translationKey as TranslationKey)
 	}
 
@@ -125,10 +124,10 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	 */
 	async promptForNewPassword(title: string, oldPassword: string | null): Promise<string> {
 		const [{ Dialog }, { PasswordForm, PasswordModel }] = await Promise.all([
-			import("../../gui/base/Dialog.js"),
-			import("../../../mail-app/settings/PasswordForm.js"),
+			import("../../common/gui/base/Dialog.js"),
+			import("../settings/PasswordForm.js"),
 		])
-		const locator = await WebCommonNativeFacade.getInitializedLocator()
+		const locator = await MailWebCommonNativeFacade.getInitializedLocator()
 		const model = new PasswordModel(locator.usageTestController, locator.logins, { checkOldPassword: false, enforceStrength: false })
 
 		return new Promise((resolve, reject) => {
@@ -155,7 +154,7 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	async promptForPassword(title: string): Promise<string> {
-		const { Dialog } = await import("../../gui/base/Dialog.js")
+		const { Dialog } = await import("../../common/gui/base/Dialog.js")
 
 		return new Promise((resolve, reject) => {
 			const dialog = showRequestPasswordDialog({
@@ -174,13 +173,13 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	private static async getInitializedLocator(): Promise<IMainLocator> {
-		const { locator } = await import("../../api/main/MainLocator")
+		const { locator } = await import("../../common/api/main/MainLocator.js")
 		await locator.initialized
 		return locator
 	}
 
 	private async parseContacts(fileList: FileReference[]) {
-		const { fileApp, logins } = await WebCommonNativeFacade.getInitializedLocator()
+		const { fileApp, logins } = await MailWebCommonNativeFacade.getInitializedLocator()
 
 		await logins.waitForPartialLogin()
 
@@ -207,7 +206,7 @@ export class WebCommonNativeFacade implements CommonNativeFacade {
 	async handleFileImport(filesUris: ReadonlyArray<string>): Promise<void> {
 		// FIXME: contactImporter is no longer in locator, may need to split CommonNativeFacade into
 		// mail and calendar
-		const { fileApp, contactModel } = await WebCommonNativeFacade.getInitializedLocator()
+		const { fileApp, contactModel } = await MailWebCommonNativeFacade.getInitializedLocator()
 		// FIXME: const importer = await contactImporter()
 
 		// For now, we just handle .vcf files, so we don't need to care about the file type

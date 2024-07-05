@@ -32,21 +32,16 @@ import {
 } from "../../../common/misc/Formatter.js"
 import {
 	AlarmInterval,
-	alarmIntervalToLuxonDurationLikeObject,
 	AlarmIntervalUnit,
 	CalendarDay,
 	CalendarMonth,
 	eventEndsAfterDay,
 	eventStartsBefore,
-	getAllDayDateForTimezone,
 	getEndOfDayWithZone,
-	getEventEnd,
-	getEventStart,
 	getStartOfDayWithZone,
 	getStartOfNextDayWithZone,
 	getStartOfTheWeekOffset,
 	getStartOfWeek,
-	getTimeZone,
 	getWeekNumber,
 	incrementByRepeatPeriod,
 	StandardAlarmInterval,
@@ -64,19 +59,27 @@ import {
 import { AllIcons } from "../../../common/gui/base/Icon.js"
 import { SelectorItemList } from "../../../common/gui/base/DropDownSelector.js"
 import { DateTime, Duration } from "luxon"
-import { CalendarEventTimes, cleanMailAddress, isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils.js"
 import { CalendarEvent, UserSettingsGroupRoot } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { ProgrammingError } from "../../../common/api/common/error/ProgrammingError.js"
 import { size } from "../../../common/gui/size.js"
 import { isColorLight, isValidColorCode } from "../../../common/gui/base/Color.js"
 import { GroupColors } from "../view/CalendarView.js"
-import { CalendarInfo } from "../model/CalendarModel.js"
+import { CalendarInfo } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { User } from "../../../common/api/entities/sys/TypeRefs.js"
 import { EventType } from "./eventeditor-model/CalendarEventModel.js"
 import { hasCapabilityOnGroup } from "../../../common/sharing/GroupUtils.js"
 import { EventsOnDays } from "../view/CalendarViewModel.js"
 import { CalendarEventPreviewViewModel } from "./eventpopup/CalendarEventPreviewViewModel.js"
 import { createAsyncDropdown } from "../../../common/gui/base/Dropdown.js"
+import {
+	alarmIntervalToLuxonDurationLikeObject,
+	CalendarEventTimes,
+	cleanMailAddress,
+	getAllDayDateForTimezone,
+	getTimeZone,
+	isAllDayEvent,
+} from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getEventEnd, getEventStart } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 export function renderCalendarSwitchLeftButton(label: TranslationKey, click: () => unknown): Child {
 	return m(IconButton, {

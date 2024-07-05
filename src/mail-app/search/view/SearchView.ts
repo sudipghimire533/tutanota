@@ -86,7 +86,7 @@ import { showDateRangeSelectionDialog } from "../../../calendar-app/calendar/gui
 import { MailFilterButton } from "../../mail/view/MailFilterButton.js"
 import { listSelectionKeyboardShortcuts } from "../../../common/gui/base/ListUtils.js"
 import { getElementId, isSameId } from "../../../common/api/common/utils/EntityUtils.js"
-import { CalendarInfo } from "../../../calendar-app/calendar/model/CalendarModel.js"
+import { CalendarInfo } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { Checkbox, CheckboxAttrs } from "../../../common/gui/base/Checkbox.js"
 import { CalendarEventPreviewViewModel } from "../../../calendar-app/calendar/gui/eventpopup/CalendarEventPreviewViewModel.js"
 import {
@@ -98,11 +98,11 @@ import {
 } from "../../../calendar-app/calendar/view/EventDetailsView.js"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog.js"
 import { CalendarOperation } from "../../../calendar-app/calendar/gui/eventeditor-model/CalendarEventModel.js"
-import { getEventWithDefaultTimes } from "../../../common/api/common/utils/CommonCalendarUtils.js"
 import { showNewCalendarEventEditDialog } from "../../../calendar-app/calendar/gui/eventeditor-view/CalendarEventEditDialog.js"
 import { getSharedGroupName } from "../../../common/sharing/GroupUtils.js"
 import { YEAR_IN_MILLIS } from "@tutao/tutanota-utils/dist/DateUtils.js"
 import { getIndentedFolderNameForDropdown } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { getEventWithDefaultTimes } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 assertMainOrNode()
 

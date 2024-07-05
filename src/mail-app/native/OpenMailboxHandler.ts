@@ -1,8 +1,8 @@
 import m from "mithril"
-import { locator } from "../../api/main/MainLocator"
-import { MailFolderType } from "../../api/common/TutanotaConstants.js"
+import { locator } from "../../common/api/main/MainLocator.js"
+import { MailFolderType } from "../../common/api/common/TutanotaConstants.js"
 
-import { assertSystemFolderOfType } from "../../mailFunctionality/CommonMailUtils.js"
+import { assertSystemFolderOfType } from "../../common/mailFunctionality/CommonMailUtils.js"
 
 export async function openMailbox(userId: Id, mailAddress: string, requestedPath: string | null) {
 	if (locator.logins.isUserLoggedIn() && locator.logins.getUserController().user._id === userId) {
@@ -19,13 +19,5 @@ export async function openMailbox(userId: Id, mailAddress: string, requestedPath
 		} else {
 			m.route.set(`/login?noAutoLogin=false&userId=${userId}&loginWith=${mailAddress}&requestedPath=${encodeURIComponent(requestedPath)}`)
 		}
-	}
-}
-
-export function openCalendar(userId: Id) {
-	if (locator.logins.isUserLoggedIn() && locator.logins.getUserController().user._id === userId) {
-		m.route.set("/calendar/agenda")
-	} else {
-		m.route.set(`/login?noAutoLogin=false&userId=${userId}&requestedPath=${encodeURIComponent("/calendar/agenda")}`)
 	}
 }

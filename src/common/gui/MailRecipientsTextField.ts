@@ -11,10 +11,10 @@ import { RecipientsSearchModel } from "../misc/RecipientsSearchModel.js"
 import { getFirstOrThrow, lazy } from "@tutao/tutanota-utils"
 import { Dialog } from "./base/Dialog.js"
 import { SearchDropDown } from "./SearchDropDown.js"
-import { findRecipientWithAddress } from "../api/common/utils/CommonCalendarUtils.js"
 import { Icons } from "./base/icons/Icons.js"
 import { theme } from "./theme.js"
 import { getMailAddressDisplayText } from "../mailFunctionality/CommonMailUtils.js"
+import { findRecipientWithAddress } from "../calendarFunctionality/commonCalendarUtils.js"
 
 export interface MailRecipientsTextFieldAttrs {
 	label: TranslationKey

@@ -6,8 +6,8 @@ import { getContactDisplayName } from "../../contactsFunctionality/ContactUtils.
 import { PartialRecipient, Recipient, RecipientType } from "../common/recipients/Recipient.js"
 import { BoundedExecutor, LazyLoaded } from "@tutao/tutanota-utils"
 import { Contact, ContactTypeRef } from "../entities/tutanota/TypeRefs"
-import { cleanMailAddress } from "../common/utils/CommonCalendarUtils.js"
 import { createNewContact, isTutanotaMailAddress } from "../../mailFunctionality/CommonMailUtils.js"
+import { cleanMailAddress } from "../../calendarFunctionality/commonCalendarUtils.js"
 
 /**
  * A recipient that can be resolved to obtain contact and recipient type

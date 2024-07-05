@@ -1,9 +1,9 @@
 import type { $Promisable, DeferredObject, Require } from "@tutao/tutanota-utils"
 import { assertNotNull, clone, defer, downcast, filterInt, getFromMap, isSameDay, symmetricDifference } from "@tutao/tutanota-utils"
-import { CalendarMethod, FeatureType, GroupType, OperationType } from "../../../common/api/common/TutanotaConstants"
+import { CalendarMethod, FeatureType, GroupType, OperationType } from "../api/common/TutanotaConstants.js"
 
-import { EventController } from "../../../common/api/main/EventController"
-import type { Group, GroupInfo, User, UserAlarmInfo } from "../../../common/api/entities/sys/TypeRefs.js"
+import { EventController } from "../api/main/EventController.js"
+import type { Group, GroupInfo, User, UserAlarmInfo } from "../api/entities/sys/TypeRefs.js"
 import {
 	createDateWrapper,
 	createMembershipRemoveData,
@@ -11,7 +11,7 @@ import {
 	GroupMembership,
 	GroupTypeRef,
 	UserAlarmInfoTypeRef,
-} from "../../../common/api/entities/sys/TypeRefs.js"
+} from "../api/entities/sys/TypeRefs.js"
 import {
 	CalendarEvent,
 	CalendarEventTypeRef,
@@ -21,39 +21,34 @@ import {
 	CalendarGroupRootTypeRef,
 	createGroupSettings,
 	FileTypeRef,
-} from "../../../common/api/entities/tutanota/TypeRefs.js"
-import { isApp, isDesktop } from "../../../common/api/common/Env"
-import type { LoginController } from "../../../common/api/main/LoginController"
-import { LockedError, NotAuthorizedError, NotFoundError, PreconditionFailedError } from "../../../common/api/common/error/RestError"
-import type { ParsedCalendarData } from "../export/CalendarImporter"
-import { ParserError } from "../../../common/misc/parsing/ParserCombinator"
-import { ProgressTracker } from "../../../common/api/main/ProgressTracker"
-import type { IProgressMonitor } from "../../../common/api/common/utils/ProgressMonitor"
-import { NoopProgressMonitor } from "../../../common/api/common/utils/ProgressMonitor"
-import { EntityClient } from "../../../common/api/common/EntityClient"
-import type { MailModel } from "../../../common/mailFunctionality/MailModel.js"
-import { elementIdPart, getElementId, isSameId, listIdPart, removeTechnicalFields } from "../../../common/api/common/utils/EntityUtils"
-import type { AlarmScheduler } from "../date/AlarmScheduler.js"
-import { Notifications, NotificationType } from "../../../common/gui/Notifications"
+} from "../api/entities/tutanota/TypeRefs.js"
+import { isApp, isDesktop } from "../api/common/Env.js"
+import type { LoginController } from "../api/main/LoginController.js"
+import { LockedError, NotAuthorizedError, NotFoundError, PreconditionFailedError } from "../api/common/error/RestError.js"
+import type { ParsedCalendarData } from "../../calendar-app/calendar/export/CalendarImporter.js"
+import { ParserError } from "../misc/parsing/ParserCombinator.js"
+import { ProgressTracker } from "../api/main/ProgressTracker.js"
+import type { IProgressMonitor } from "../api/common/utils/ProgressMonitor.js"
+import { NoopProgressMonitor } from "../api/common/utils/ProgressMonitor.js"
+import { EntityClient } from "../api/common/EntityClient.js"
+import type { MailModel } from "../mailFunctionality/MailModel.js"
+import { elementIdPart, getElementId, isSameId, listIdPart, removeTechnicalFields } from "../api/common/utils/EntityUtils.js"
+import type { AlarmScheduler } from "../../calendar-app/calendar/date/AlarmScheduler.js"
+import { Notifications, NotificationType } from "../gui/Notifications.js"
 import m from "mithril"
-import type { CalendarEventInstance, CalendarEventProgenitor, CalendarFacade } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
-import {
-	AlarmInfoTemplate,
-	CachingMode,
-	CalendarEventAlteredInstance,
-	CalendarEventUidIndexEntry,
-} from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
-import { IServiceExecutor } from "../../../common/api/common/ServiceRequest"
-import { MembershipService } from "../../../common/api/entities/sys/Services"
-import { FileController } from "../../../common/file/FileController"
-import { findAttendeeInAddresses } from "../../../common/api/common/utils/CommonCalendarUtils.js"
+import type { CalendarEventInstance, CalendarEventProgenitor, CalendarFacade } from "../api/worker/facades/lazy/CalendarFacade.js"
+import { AlarmInfoTemplate, CachingMode, CalendarEventAlteredInstance, CalendarEventUidIndexEntry } from "../api/worker/facades/lazy/CalendarFacade.js"
+import { IServiceExecutor } from "../api/common/ServiceRequest.js"
+import { MembershipService } from "../api/entities/sys/Services.js"
+import { FileController } from "../file/FileController.js"
 import { TutanotaError } from "@tutao/tutanota-error"
-import { SessionKeyNotFoundError } from "../../../common/api/common/error/SessionKeyNotFoundError.js"
+import { SessionKeyNotFoundError } from "../api/common/error/SessionKeyNotFoundError.js"
 import Stream from "mithril/stream"
-import { ObservableLazyLoaded } from "../../../common/api/common/utils/ObservableLazyLoaded.js"
-import { UserController } from "../../../common/api/main/UserController.js"
-import { formatDateWithWeekdayAndTime, formatTime } from "../../../common/misc/Formatter.js"
-import { EntityUpdateData, isUpdateFor, isUpdateForTypeRef } from "../../../common/api/common/utils/EntityUpdateUtils.js"
+import { ObservableLazyLoaded } from "../api/common/utils/ObservableLazyLoaded.js"
+import { UserController } from "../api/main/UserController.js"
+import { formatDateWithWeekdayAndTime, formatTime } from "../misc/Formatter.js"
+import { EntityUpdateData, isUpdateFor, isUpdateForTypeRef } from "../api/common/utils/EntityUpdateUtils.js"
+import { findAttendeeInAddresses } from "./CommonCalendarUtils.js"
 
 const TAG = "[CalendarModel]"
 export type CalendarInfo = {
@@ -195,7 +190,7 @@ export class CalendarModel {
 	}
 
 	private async loadOrCreateCalendarInfo(progressMonitor: IProgressMonitor): Promise<ReadonlyMap<Id, CalendarInfo>> {
-		const { findPrivateCalendar } = await import("../date/CalendarUtils.js")
+		const { findPrivateCalendar } = await import("./CommonCalendarUtils.js")
 		const calendarInfos = await this.loadCalendarInfos(progressMonitor)
 
 		if (!this.logins.isInternalUserLoggedIn() || findPrivateCalendar(calendarInfos)) {
@@ -235,7 +230,7 @@ export class CalendarModel {
 	): Promise<void> {
 		// If the event was copied it might still carry some fields for re-encryption. We can't reuse them.
 		removeTechnicalFields(event)
-		const { assignEventId } = await import("../date/CalendarUtils")
+		const { assignEventId } = await import("./CommonCalendarUtils.js")
 		// if values of the existing events have changed that influence the alarm time then delete the old event and create a new
 		// one.
 		assignEventId(event, zone, groupRoot)
@@ -302,7 +297,7 @@ export class CalendarModel {
 			// was already resolved and the entity updated.
 			const file = await this.entityClient.load(FileTypeRef, fileId)
 			const dataFile = await this.fileController.getAsDataFile(file)
-			const { parseCalendarFile } = await import("../export/CalendarImporter")
+			const { parseCalendarFile } = await import("../../calendar-app/calendar/export/CalendarImporter.js")
 			return await parseCalendarFile(dataFile)
 		} catch (e) {
 			if (e instanceof SessionKeyNotFoundError) {
@@ -492,7 +487,7 @@ export class CalendarModel {
 	 * @param updateEvent the event that contains the new version of dbEvent. */
 	private async processCalendarUpdate(dbTarget: CalendarEventUidIndexEntry, dbEvent: CalendarEventInstance, updateEvent: CalendarEvent): Promise<void> {
 		console.log(TAG, "processing request for existing event instance")
-		const { repeatRuleWithExcludedAlteredInstances } = await import("../gui/eventeditor-model/CalendarEventWhenModel.js")
+		const { repeatRuleWithExcludedAlteredInstances } = await import("../../calendar-app/calendar/gui/eventeditor-model/CalendarEventWhenModel.js")
 		// some providers do not increment the sequence for all edit operations (like google when changing the summary)
 		// we'd rather apply the same update too often than miss some, and this enables us to update our own status easily
 		// without having to increment the sequence.
@@ -527,7 +522,7 @@ export class CalendarModel {
 		alarms: Array<AlarmInfoTemplate>,
 	): Promise<void> {
 		console.log(TAG, "processing new instance request")
-		const { repeatRuleWithExcludedAlteredInstances } = await import("../gui/eventeditor-model/CalendarEventWhenModel.js")
+		const { repeatRuleWithExcludedAlteredInstances } = await import("../../calendar-app/calendar/gui/eventeditor-model/CalendarEventWhenModel.js")
 		if (updateEvent.recurrenceId != null && dbTarget.progenitor != null && dbTarget.progenitor.repeatRule != null) {
 			// request for a new altered instance. we'll try adding the exclusion for this instance to the progenitor if possible
 			// since not all calendar apps add altered instances to the list of exclusions.
@@ -812,7 +807,7 @@ export class CalendarModel {
 /** return false when the given events (representing the new and old version of the same event) are both long events
  * or both short events, true otherwise */
 async function didLongStateChange(newEvent: CalendarEvent, existingEvent: CalendarEvent, zone: string): Promise<boolean> {
-	const { isLongEvent } = await import("../date/CalendarUtils.js")
+	const { isLongEvent } = await import("./CommonCalendarUtils.js")
 	return isLongEvent(newEvent, zone) !== isLongEvent(existingEvent, zone)
 }
 

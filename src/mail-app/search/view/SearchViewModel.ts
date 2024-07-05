@@ -54,7 +54,7 @@ import { EntityClient, loadMultipleFromLists } from "../../../common/api/common/
 import { SearchRouter } from "./SearchRouter.js"
 import { MailOpenedListener } from "../../mail/view/MailViewModel.js"
 import { containsEventOfType, EntityUpdateData, getEventOfType, isUpdateForTypeRef } from "../../../common/api/common/utils/EntityUpdateUtils.js"
-import { CalendarInfo } from "../../../calendar-app/calendar/model/CalendarModel.js"
+import { CalendarInfo } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import m from "mithril"
 import { CalendarFacade } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"

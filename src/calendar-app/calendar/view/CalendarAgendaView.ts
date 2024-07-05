@@ -1,7 +1,6 @@
 import m, { Child, Children, Component, Vnode, VnodeDOM } from "mithril"
 import { incrementDate, isSameDay } from "@tutao/tutanota-utils"
 import { lang } from "../../../common/misc/LanguageViewModel"
-import { getTimeZone } from "../date/CalendarUtils"
 import type { CalendarEvent } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import type { GroupColors } from "./CalendarView"
 import type { CalendarEventBubbleClickHandler, CalendarEventBubbleKeyDownHandler } from "./CalendarViewModel"
@@ -16,7 +15,6 @@ import { DaySelector } from "../gui/day-selector/DaySelector.js"
 import { CalendarEventPreviewViewModel } from "../gui/eventpopup/CalendarEventPreviewViewModel.js"
 import { EventDetailsView } from "./EventDetailsView.js"
 import { getElementId, getListId } from "../../../common/api/common/utils/EntityUtils.js"
-import { isAllDayEvent } from "../../../common/api/common/utils/CommonCalendarUtils.js"
 import { CalendarTimeIndicator } from "./CalendarTimeIndicator.js"
 import { Time } from "../date/Time.js"
 import { DaysToEvents } from "../date/CalendarEventsRepository.js"
@@ -26,6 +24,7 @@ import { PageView } from "../../../common/gui/base/PageView.js"
 import { getIfLargeScroll } from "../../../common/gui/base/GuiUtils.js"
 import { isKeyPressed } from "../../../common/misc/KeyManager.js"
 import { Keys } from "../../../common/api/common/TutanotaConstants.js"
+import { getTimeZone, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export type CalendarAgendaViewAttrs = {
 	selectedDate: Date

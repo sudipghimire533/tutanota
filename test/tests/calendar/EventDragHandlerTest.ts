@@ -4,9 +4,9 @@ import { DAY_IN_MILLIS, defer, downcast } from "@tutao/tutanota-utils"
 import type { DraggedEvent } from "../../../src/calendar-app/view/CalendarViewModel.js"
 import { makeEvent } from "./CalendarTestUtils.js"
 import { getAllDayDateUTCFromZone, getStartOfDayWithZone, getStartOfNextDayWithZone } from "../../../src/calendar-app/date/CalendarUtils.js"
-import { isAllDayEvent } from "../../../src/common/api/common/utils/CommonCalendarUtils.js"
 import { DateTime } from "luxon"
 import { spy } from "@tutao/tutanota-test-utils"
+import { isAllDayEvent } from "../../../src/common/calendarFunctionality/commonCalendarUtils.js"
 
 const INIT_MOUSE_POS = {
 	x: 0,

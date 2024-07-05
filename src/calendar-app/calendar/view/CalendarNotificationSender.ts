@@ -1,18 +1,17 @@
 import { lang } from "../../../common/misc/LanguageViewModel.js"
 import { makeInvitationCalendarFile } from "../export/CalendarExporter.js"
 import { getAttendeeStatus, MailMethod, mailMethodToCalendarMethod } from "../../../common/api/common/TutanotaConstants.js"
-import { getTimeZone } from "../date/CalendarUtils.js"
 import type { CalendarEvent, CalendarEventAttendee, EncryptedMailAddress } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { createCalendarEventAttendee } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { assertNotNull, noOp, ofClass } from "@tutao/tutanota-utils"
 import type { SendMailModel } from "../../../common/mailFunctionality/SendMailModel.js"
 import { windowFacade } from "../../../common/misc/WindowFacade.js"
 import { RecipientsNotFoundError } from "../../../common/api/common/error/RecipientsNotFoundError.js"
-import { cleanMailAddress, findAttendeeInAddresses, findRecipientWithAddress } from "../../../common/api/common/utils/CommonCalendarUtils.js"
 import { ProgrammingError } from "../../../common/api/common/error/ProgrammingError.js"
 
 import { calendarAttendeeStatusSymbol, formatEventDuration } from "../gui/CalendarGuiUtils.js"
 import { RecipientField } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { cleanMailAddress, findAttendeeInAddresses, findRecipientWithAddress, getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
 
 export class CalendarNotificationSender {
 	/** Used for knowing how many emails are in the process of being sent. */

@@ -66,19 +66,9 @@ import {
 } from "../../../../common/api/entities/tutanota/TypeRefs.js"
 import { User } from "../../../../common/api/entities/sys/TypeRefs.js"
 import { MailboxDetail } from "../../../../common/mailFunctionality/MailModel.js"
-import {
-	AlarmInterval,
-	areRepeatRulesEqual,
-	CalendarEventValidity,
-	checkEventValidity,
-	DefaultDateProvider,
-	getTimeZone,
-	incrementSequence,
-	parseAlarmInterval,
-} from "../../date/CalendarUtils.js"
+import { AlarmInterval, areRepeatRulesEqual, CalendarEventValidity, checkEventValidity, incrementSequence } from "../../date/CalendarUtils.js"
 import { arrayEqualsWithPredicate, assertNonNull, assertNotNull, getFirstOrThrow, identity, lazy, Require } from "@tutao/tutanota-utils"
-import { cleanMailAddress } from "../../../../common/api/common/utils/CommonCalendarUtils.js"
-import { CalendarInfo, CalendarModel } from "../../model/CalendarModel.js"
+import { CalendarInfo, CalendarModel } from "../../../../common/calendarFunctionality/CalendarModel.js"
 import { NotFoundError, PayloadTooLargeError } from "../../../../common/api/common/error/RestError.js"
 import { CalendarNotificationSender } from "../../view/CalendarNotificationSender.js"
 import { SendMailModel } from "../../../../common/mailFunctionality/SendMailModel.js"
@@ -102,6 +92,8 @@ import { SimpleTextViewModel } from "../../../../common/misc/SimpleTextViewModel
 import { AlarmInfoTemplate } from "../../../../common/api/worker/facades/lazy/CalendarFacade.js"
 import { getEventType } from "../CalendarGuiUtils.js"
 import { getDefaultSender } from "../../../../common/mailFunctionality/CommonMailUtils.js"
+import { cleanMailAddress, DefaultDateProvider, getTimeZone } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { parseAlarmInterval } from "../../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 /** the type of the event determines which edit operations are available to us. */
 export const enum EventType {

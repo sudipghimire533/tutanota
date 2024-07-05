@@ -2,20 +2,10 @@ import m, { Children, ClassComponent, Component, Vnode, VnodeDOM } from "mithril
 import { px, size } from "../../../common/gui/size"
 import { EventTextTimeOption, WeekStart } from "../../../common/api/common/TutanotaConstants"
 import type { CalendarDay, CalendarMonth } from "../date/CalendarUtils"
-import {
-	getAllDayDateForTimezone,
-	getDiffIn24hIntervals,
-	getEventEnd,
-	getFirstDayOfMonth,
-	getStartOfNextDayWithZone,
-	getStartOfTheWeekOffset,
-	getTimeZone,
-	getWeekNumber,
-} from "../date/CalendarUtils"
+import { getDiffIn24hIntervals, getFirstDayOfMonth, getStartOfNextDayWithZone, getStartOfTheWeekOffset, getWeekNumber } from "../date/CalendarUtils"
 import { incrementDate, incrementMonth, isToday, lastThrow, neverNull, ofClass } from "@tutao/tutanota-utils"
 import { ContinuingCalendarEventBubble } from "./ContinuingCalendarEventBubble"
 import { styles } from "../../../common/gui/styles"
-import { isAllDayEvent, isAllDayEventByTimes } from "../../../common/api/common/utils/CommonCalendarUtils"
 import { windowFacade } from "../../../common/misc/WindowFacade"
 import type { CalendarEvent } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import type { GroupColors } from "./CalendarView"
@@ -42,6 +32,8 @@ import { client } from "../../../common/misc/ClientDetector"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import { PageView } from "../../../common/gui/base/PageView.js"
 import { DaysToEvents } from "../date/CalendarEventsRepository.js"
+import { getAllDayDateForTimezone, getTimeZone, isAllDayEvent, isAllDayEventByTimes } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getEventEnd } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 type CalendarMonthAttrs = {
 	selectedDate: Date

@@ -13,7 +13,6 @@ import {
 	MailTypeRef,
 } from "../../../src/common/api/entities/tutanota/TypeRefs.js"
 import { CalendarAttendeeStatus } from "../../../src/common/api/common/TutanotaConstants.js"
-import { findAttendeeInAddresses } from "../../../src/common/api/common/utils/CommonCalendarUtils.js"
 import { MailboxDetail, MailModel } from "../../../src/mail-app/model/MailModel.js"
 import { instance, matchers, when } from "testdouble"
 import { CalendarModel } from "../../../src/calendar-app/model/CalendarModel.js"
@@ -25,6 +24,7 @@ import { UserController } from "../../../src/common/api/main/UserController.js"
 import { SendMailModel } from "../../../src/mail-app/editor/SendMailModel.js"
 import { CalendarNotificationSender } from "../../../src/calendar-app/view/CalendarNotificationSender.js"
 import { mockAttribute } from "@tutao/tutanota-test-utils"
+import { findAttendeeInAddresses } from "../../../src/common/calendarFunctionality/commonCalendarUtils.js"
 
 const { anything, argThat } = matchers
 

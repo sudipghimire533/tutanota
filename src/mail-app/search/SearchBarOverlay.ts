@@ -18,11 +18,11 @@ import { getMailFolderIcon } from "../mail/view/MailGuiUtils"
 import { locator } from "../../common/api/main/MainLocator"
 import { IndexingErrorReason } from "../../common/api/worker/search/SearchTypes"
 import { companyTeamLabel } from "../../common/misc/ClientConstants.js"
-import { getTimeZone } from "../../calendar-app/calendar/date/CalendarUtils.js"
 
 import { formatEventDuration } from "../../calendar-app/calendar/gui/CalendarGuiUtils.js"
 import { getSenderOrRecipientHeading } from "../../common/mailFunctionality/CommonMailUtils.js"
 import { isTutanotaTeamMail } from "../mail/MailUtils.js"
+import { getTimeZone } from "../../common/calendarFunctionality/commonCalendarUtils.js"
 
 type SearchBarOverlayAttrs = {
 	state: SearchBarState

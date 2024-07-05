@@ -2,7 +2,7 @@ import { CalendarEvent, CalendarEventAttendee } from "../../../../common/api/ent
 import { calendarEventHasMoreThanOneOccurrencesLeft } from "../../date/CalendarUtils.js"
 import { CalendarEventModel, CalendarOperation, EventSaveResult, EventType, getNonOrganizerAttendees } from "../eventeditor-model/CalendarEventModel.js"
 import { NotFoundError } from "../../../../common/api/common/error/RestError.js"
-import { CalendarModel } from "../../model/CalendarModel.js"
+import { CalendarModel } from "../../../../common/calendarFunctionality/CalendarModel.js"
 import { showExistingCalendarEventEditDialog } from "../eventeditor-view/CalendarEventEditDialog.js"
 import { ProgrammingError } from "../../../../common/api/common/error/ProgrammingError.js"
 import { CalendarAttendeeStatus } from "../../../../common/api/common/TutanotaConstants.js"
