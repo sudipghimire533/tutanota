@@ -9,7 +9,7 @@ import { ContactListEntryTypeRef, ContactTypeRef } from "../api/entities/tutanot
 import { LoginIncompleteError } from "../api/common/error/LoginIncompleteError.js"
 import { EntityClient } from "../api/common/EntityClient.js"
 import { ContactSuggestion } from "../native/common/generatedipc/ContactSuggestion.js"
-import { findRecipientWithAddress } from "../calendarFunctionality/commonCalendarUtils.js"
+import { findRecipientWithAddress } from "../calendarFunctionality/CommonCalendarUtils.js"
 
 const MaxNativeSuggestions = 10
 

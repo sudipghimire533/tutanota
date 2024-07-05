@@ -22,17 +22,18 @@ import { MailFacade } from "../../../common/api/worker/facades/lazy/MailFacade.j
 import { OperationId } from "../../../common/api/main/OperationProgressTracker.js"
 import { CancelledError } from "../../../common/api/common/error/CancelledError.js"
 import { CryptoFacade } from "../../../common/api/worker/crypto/CryptoFacade.js"
+import { mailLocator } from "../../mailLocator.js"
 // .msg export is handled in DesktopFileExport because it uses APIs that can't be loaded web side
 export type MailExportMode = "msg" | "eml"
 
 export async function generateMailFile(bundle: MailBundle, fileName: string, mode: MailExportMode): Promise<DataFile> {
-	return mode === "eml" ? mailToEmlFile(bundle, fileName) : locator.fileApp.mailToMsg(bundle, fileName)
+	return mode === "eml" ? mailToEmlFile(bundle, fileName) : mailLocator.fileApp.mailToMsg(bundle, fileName)
 }
 
 export async function getMailExportMode(): Promise<MailExportMode> {
 	if (isDesktop()) {
 		const ConfigKeys = await import("../../../desktop/config/ConfigKeys")
-		const mailExportMode = (await locator.desktopSettingsFacade
+		const mailExportMode = (await mailLocator.desktopSettingsFacade
 			.getStringConfigValue(ConfigKeys.DesktopConfigKey.mailExportMode)
 			.catch(noOp)) as MailExportMode
 		return mailExportMode ?? "eml"

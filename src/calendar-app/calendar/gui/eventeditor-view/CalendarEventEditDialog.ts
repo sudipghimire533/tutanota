@@ -27,6 +27,7 @@ import { ProgrammingError } from "../../../../common/api/common/error/Programmin
 import { UpgradeRequiredError } from "../../../../common/api/main/UpgradeRequiredError.js"
 import { showPlanUpgradeRequiredDialog } from "../../../../common/misc/SubscriptionDialogs.js"
 import { convertTextToHtml } from "../../../../common/misc/Formatter.js"
+import { RecipientsSearchModel } from "../../../../common/misc/RecipientsSearchModel.js"
 
 const enum ConfirmationResult {
 	Cancel,
@@ -39,8 +40,13 @@ type EditDialogOkHandler = (posRect: PosRect, finish: Thunk) => Promise<unknown>
  * the generic way to open any calendar edit dialog. the caller should know what to do after the
  * dialog is closed.
  */
-async function showCalendarEventEditDialog(model: CalendarEventModel, responseMail: Mail | null, handler: EditDialogOkHandler): Promise<void> {
-	const recipientsSearch = await locator.recipientsSearchModel()
+async function showCalendarEventEditDialog(
+	model: CalendarEventModel,
+	responseMail: Mail | null,
+	handler: EditDialogOkHandler,
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>,
+): Promise<void> {
+	const recipientsSearch = await recipientsSearchModel()
 	const { HtmlEditor } = await import("../../../../common/gui/editor/HtmlEditor.js")
 	const groupColors: Map<Id, string> = locator.logins.getUserController().userSettingsGroupRoot.groupSettings.reduce((acc, gc) => {
 		acc.set(gc.group, gc.color)
@@ -122,7 +128,7 @@ async function showCalendarEventEditDialog(model: CalendarEventModel, responseMa
  * will unconditionally send invites on save.
  * @param model the calendar event model used to edit and save the event
  */
-export async function showNewCalendarEventEditDialog(model: CalendarEventModel): Promise<void> {
+export async function showNewCalendarEventEditDialog(model: CalendarEventModel, recipientsSearchModel: () => Promise<RecipientsSearchModel>): Promise<void> {
 	let finished = false
 
 	const okAction: EditDialogOkHandler = async (posRect, finish) => {
@@ -149,7 +155,7 @@ export async function showNewCalendarEventEditDialog(model: CalendarEventModel):
 			}
 		}
 	}
-	return showCalendarEventEditDialog(model, null, okAction)
+	return showCalendarEventEditDialog(model, null, okAction, recipientsSearchModel)
 }
 
 /**
@@ -165,6 +171,7 @@ export async function showExistingCalendarEventEditDialog(
 	model: CalendarEventModel,
 	identity: CalendarEventIdentity,
 	responseMail: Mail | null = null,
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>,
 ): Promise<void> {
 	let finished = false
 
@@ -201,7 +208,7 @@ export async function showExistingCalendarEventEditDialog(
 			}
 		}
 	}
-	await showCalendarEventEditDialog(model, responseMail, okAction)
+	await showCalendarEventEditDialog(model, responseMail, okAction, recipientsSearchModel)
 }
 
 /** if there are update worthy changes on the model, ask the user what to do with them.

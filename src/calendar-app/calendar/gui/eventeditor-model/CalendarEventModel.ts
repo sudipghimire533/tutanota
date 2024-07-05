@@ -91,9 +91,10 @@ import { ProgrammingError } from "../../../../common/api/common/error/Programmin
 import { SimpleTextViewModel } from "../../../../common/misc/SimpleTextViewModel.js"
 import { AlarmInfoTemplate } from "../../../../common/api/worker/facades/lazy/CalendarFacade.js"
 import { getEventType } from "../CalendarGuiUtils.js"
-import { getDefaultSender } from "../../../../common/mailFunctionality/CommonMailUtils.js"
-import { cleanMailAddress, DefaultDateProvider, getTimeZone } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { cleanMailAddress, getDefaultSender } from "../../../../common/mailFunctionality/CommonMailUtils.js"
 import { parseAlarmInterval } from "../../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone } from "../../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { DefaultDateProvider } from "../../../../common/calendarFunctionality/CommonDateUtils.js"
 
 /** the type of the event determines which edit operations are available to us. */
 export const enum EventType {

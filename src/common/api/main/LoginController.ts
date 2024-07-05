@@ -5,7 +5,7 @@ import type { UserController, UserControllerInitData } from "./UserController"
 import { getWhitelabelCustomizations } from "../../../common/misc/WhitelabelCustomizations"
 import { NotFoundError } from "../common/error/RestError"
 import { client } from "../../misc/ClientDetector"
-import type { LoginFacade, NewSessionData } from "../worker/facades/LoginFacade"
+import type { LoginFacade, LoginListener, NewSessionData } from "../worker/facades/LoginFacade"
 import { ResumeSessionErrorReason } from "../worker/facades/LoginFacade"
 import type { Credentials } from "../../misc/credentials/Credentials"
 import { FeatureType, KdfType } from "../common/TutanotaConstants"
@@ -13,6 +13,7 @@ import { SessionType } from "../common/SessionType"
 import { IMainLocator } from "./MainLocator"
 import { ExternalUserKeyDeriver } from "../../misc/LoginUtils.js"
 import { UnencryptedCredentials } from "../../native/common/generatedipc/UnencryptedCredentials.js"
+import { PageContextLoginListener } from "./PageContextLoginListener.js"
 
 assertMainOrNodeBoot()
 
@@ -39,8 +40,10 @@ export class LoginController {
 	private postLoginActions: Array<lazy<Promise<PostLoginAction>>> = []
 	private fullyLoggedIn: boolean = false
 	private atLeastPartiallyLoggedIn: boolean = false
+	private loginListener: PageContextLoginListener | null = null
 
-	init() {
+	init(loginListener: PageContextLoginListener) {
+		this.loginListener = loginListener
 		this.waitForFullLogin().then(async () => {
 			this.fullyLoggedIn = true
 			await this.waitForPartialLogin()
@@ -202,11 +205,10 @@ export class LoginController {
 	}
 
 	async waitForFullLogin(): Promise<void> {
-		const locator = await this.getMainLocator()
 		// Full login event might be received before we finish userLogin on the client side because they are done in parallel.
 		// So we make sure to wait for userLogin first.
 		await this.waitForPartialLogin()
-		return locator.loginListener.waitForFullLogin()
+		return this.loginListener?.waitForFullLogin()
 	}
 
 	isInternalUserLoggedIn(): boolean {
@@ -243,9 +245,8 @@ export class LoginController {
 			this.userController = null
 			this.partialLogin = defer()
 			this.fullyLoggedIn = false
-			const locator = await this.getMainLocator()
-			locator.loginListener.reset()
-			this.init()
+			this.loginListener?.reset()
+			this.init(assertNotNull(this.loginListener))
 		} else {
 			console.log("No session to delete")
 		}
@@ -281,7 +282,7 @@ export class LoginController {
 	async retryAsyncLogin() {
 		const loginFacade = await this.getLoginFacade()
 		const locator = await this.getMainLocator()
-		this.loginListener.onRetryLogin()
+		this.loginListener?.onRetryLogin()
 		await loginFacade.retryAsyncLogin()
 	}
 }

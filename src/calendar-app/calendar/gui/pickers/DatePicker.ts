@@ -16,7 +16,7 @@ import { getCalendarMonth } from "../CalendarGuiUtils.js"
 import { isKeyPressed, keyboardEventToKeyPress, keyHandler, KeyPress, useKeyHandler } from "../../../../common/misc/KeyManager.js"
 import { Keys, TabIndex } from "../../../../common/api/common/TutanotaConstants.js"
 import { AriaPopupType } from "../../../../common/gui/AriaUtils.js"
-import { getAllDayDateLocal } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getAllDayDateLocal } from "../../../../common/calendarFunctionality/CommonDateUtils.js"
 
 export interface DatePickerAttrs {
 	date: Date

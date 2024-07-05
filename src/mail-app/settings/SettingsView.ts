@@ -67,6 +67,16 @@ import { TemplateListView } from "./TemplateListView.js"
 import { TextField } from "../../common/gui/base/TextField.js"
 import { ContactsSettingsViewer } from "./ContactsSettingsViewer.js"
 import { NotificationSettingsViewer } from "./NotificationSettingsViewer.js"
+import { CredentialsProvider } from "../../common/misc/credentials/CredentialsProvider.js"
+import { MobileSystemFacade } from "../../common/native/common/generatedipc/MobileSystemFacade.js"
+import { WebauthnClient } from "../../common/misc/2fa/webauthn/WebauthnClient.js"
+import { NativeInterfaceMain } from "../../common/native/main/NativeInterfaceMain.js"
+import { FileController } from "../../common/file/FileController.js"
+import type { NativePushServiceApp } from "../../common/native/main/NativePushServiceApp.js"
+import { SearchModel } from "../search/model/SearchModel.js"
+import { SettingsFacade } from "../../common/native/common/generatedipc/SettingsFacade.js"
+import type { NativeFileApp } from "../../common/native/common/FileApp.js"
+import { RecipientsSearchModel } from "../../common/misc/RecipientsSearchModel.js"
 
 assertMainOrNode()
 
@@ -86,6 +96,17 @@ export interface SettingsViewAttrs extends TopLevelAttrs {
 	drawerAttrs: DrawerMenuAttrs
 	header: AppHeaderAttrs
 	logins: LoginController
+	credentialsProvider: CredentialsProvider
+	systemFacade: MobileSystemFacade
+	webAuthn: WebauthnClient
+	native: NativeInterfaceMain
+	fileController: FileController
+	pushService: NativePushServiceApp
+	search: SearchModel
+	showSetupWizard: () => unknown
+	desktopSettingsFacade: SettingsFacade
+	fileApp: NativeFileApp
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>
 }
 
 export class SettingsView extends BaseTopLevelView implements TopLevelView<SettingsViewAttrs> {
@@ -105,6 +126,14 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 	private readonly _targetFolder: string
 	private readonly _targetRoute: string
 	detailsViewer: UpdatableSettingsDetailsViewer | null = null // the component for the details column. can be set by settings views
+	private webAuthn: WebauthnClient
+	private systemFacade: MobileSystemFacade
+	private fileController: FileController
+	private credentialsProvider: CredentialsProvider
+	private pushService: NativePushServiceApp
+	private search: SearchModel
+	private recipientsSearchModel: () => Promise<RecipientsSearchModel>
+	private showSetupWizard: () => unknown
 
 	_customDomains: LazyLoaded<string[]>
 	_templateInvitations: ReceivedGroupInvitationsModel<GroupType.Template>
@@ -112,40 +141,48 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 	constructor(vnode: Vnode<SettingsViewAttrs>) {
 		super()
 		this.logins = vnode.attrs.logins
+		this.webAuthn = vnode.attrs.webAuthn
+		this.fileController = vnode.attrs.fileController
+		this.showSetupWizard = vnode.attrs.showSetupWizard
+		this.systemFacade = vnode.attrs.systemFacade
+		this.credentialsProvider = vnode.attrs.credentialsProvider
+		this.pushService = vnode.attrs.pushService
+		this.search = vnode.attrs.search
+		this.recipientsSearchModel = vnode.attrs.recipientsSearchModel
 		this._userFolders = [
 			new SettingsFolder(
 				"login_label",
 				() => BootIcons.Contacts,
 				"login",
-				() => new LoginSettingsViewer(locator.credentialsProvider, isApp() ? locator.systemFacade : null),
+				() => new LoginSettingsViewer(this.credentialsProvider, this.systemFacade, this.webAuthn),
 				undefined,
 			),
 			new SettingsFolder(
 				"email_label",
 				() => BootIcons.Mail,
 				"mail",
-				() => new MailSettingsViewer(),
+				() => new MailSettingsViewer(this.search),
 				undefined,
 			),
 			new SettingsFolder(
 				"contacts_label",
 				() => BootIcons.Contacts,
 				"contacts",
-				() => new ContactsSettingsViewer(),
+				() => new ContactsSettingsViewer(this.systemFacade),
 				undefined,
 			),
 			new SettingsFolder(
 				"appearanceSettings_label",
 				() => Icons.Palette,
 				"appearance",
-				() => new AppearanceSettingsViewer(),
+				() => new AppearanceSettingsViewer(vnode.attrs.desktopSettingsFacade),
 				undefined,
 			),
 			new SettingsFolder(
 				"notificationSettings_action",
 				() => Icons.Bell,
 				"notifications",
-				() => new NotificationSettingsViewer(),
+				() => new NotificationSettingsViewer(this.pushService),
 				undefined,
 			),
 		]
@@ -157,9 +194,9 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 					() => Icons.Desktop,
 					"desktop",
 					() => {
-						const desktopSettingsViewer = new DesktopSettingsViewer()
+						const desktopSettingsViewer = new DesktopSettingsViewer(vnode.attrs.desktopSettingsFacade, vnode.attrs.fileApp)
 						locator.initialized.then(() => {
-							locator.native.setAppUpdateListener(() => desktopSettingsViewer.onAppUpdateAvailable())
+							vnode.attrs.native.setAppUpdateListener(() => desktopSettingsViewer.onAppUpdateAvailable())
 						})
 						return desktopSettingsViewer
 					},
@@ -366,7 +403,10 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 							() => this.focusSettingsDetailsColumn(),
 							() => !isApp() && this._customDomains.isLoaded() && this._customDomains.getLoaded().length > 0,
 							() => showUserImportDialog(this._customDomains.getLoaded()),
-							() => exportUserCsv(locator.entityClient, this.logins, locator.fileController, locator.counterFacade),
+							() => exportUserCsv(locator.entityClient, this.logins, this.fileController, locator.counterFacade),
+							this.webAuthn,
+							this.systemFacade,
+							this.credentialsProvider,
 						),
 					undefined,
 				),
@@ -394,7 +434,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 					"globalSettings_label",
 					() => BootIcons.Settings,
 					"global",
-					() => new GlobalSettingsViewer(),
+					() => new GlobalSettingsViewer(this.credentialsProvider),
 					undefined,
 				),
 			)
@@ -419,7 +459,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 						"adminSubscription_action",
 						() => BootIcons.Premium,
 						"subscription",
-						() => new SubscriptionViewer(currentPlanType),
+						() => new SubscriptionViewer(currentPlanType, this.systemFacade),
 						undefined,
 					).setIsVisibleHandler(() => !isIOSApp() || !this.logins.getUserController().isFreeAccount()),
 				)
@@ -429,7 +469,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 						"adminPayment_action",
 						() => Icons.CreditCard,
 						"invoice",
-						() => new PaymentViewer(),
+						() => new PaymentViewer(this.fileController),
 						undefined,
 					),
 				)
@@ -439,7 +479,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 						"referralSettings_label",
 						() => BootIcons.Share,
 						"referral",
-						() => new ReferralSettingsViewer(),
+						() => new ReferralSettingsViewer(this.systemFacade),
 						undefined,
 					).setIsVisibleHandler(() => !this.showBusinessSettings()),
 				)
@@ -516,7 +556,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 						  },
 					{
 						label: "sharing_label",
-						click: () => showGroupSharingDialog(folder.data.groupInfo, true),
+						click: () => showGroupSharingDialog(folder.data.groupInfo, true, this.recipientsSearchModel),
 						icon: Icons.ContactImport,
 					},
 					{
@@ -726,7 +766,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 									m(AboutDialog, {
 										onShowSetupWizard: () => {
 											dialog.close()
-											locator.showSetupWizard()
+											this.showSetupWizard()
 										},
 									}),
 								allowOkWithReturn: true,

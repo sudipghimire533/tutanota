@@ -18,6 +18,7 @@ import { DropDownSelector, DropDownSelectorAttrs } from "../../common/gui/base/D
 import { ExpanderButton, ExpanderPanel } from "../../common/gui/base/Expander.js"
 import { IdentifierRow } from "./IdentifierRow.js"
 import { mailLocator } from "../mailLocator.js"
+import type { NativePushServiceApp } from "../../common/native/main/NativePushServiceApp.js"
 
 export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 	private currentIdentifier: string | null = null
@@ -26,13 +27,13 @@ export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 	private readonly user: User
 	private identifiers: PushIdentifier[]
 
-	constructor() {
+	constructor(private readonly pushService: NativePushServiceApp) {
 		this.expanded = stream<boolean>(false)
 		this.identifiers = []
 		this.user = locator.logins.getUserController().user
 
 		if (isApp() || isDesktop()) {
-			locator.pushService.getExtendedNotificationMode().then((e) => {
+			this.pushService.getExtendedNotificationMode().then((e) => {
 				this.extendedNotificationMode = e
 
 				m.redraw()
@@ -129,7 +130,7 @@ export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 					],
 					selectedValue: this.extendedNotificationMode,
 					selectionChangedHandler: (v) => {
-						locator.pushService.setExtendedNotificationMode(v)
+						this.pushService.setExtendedNotificationMode(v)
 						this.extendedNotificationMode = v
 					},
 					dropdownWidth: 250,
@@ -158,7 +159,7 @@ export class NotificationSettingsViewer implements UpdatableSettingsViewer {
 	}
 
 	private getCurrentIdentifier(): string | null {
-		return isApp() || isDesktop() ? locator.pushService.getLoadedPushIdentifier() : null
+		return isApp() || isDesktop() ? this.pushService.getLoadedPushIdentifier() : null
 	}
 
 	async entityEventsReceived(updates: readonly EntityUpdateData[]): Promise<void> {

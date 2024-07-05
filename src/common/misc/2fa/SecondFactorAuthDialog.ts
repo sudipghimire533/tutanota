@@ -15,6 +15,8 @@ import { WebauthnError } from "../../api/common/error/WebauthnError.js"
 import { appIdToLoginUrl } from "./SecondFactorUtils.js"
 
 import { DomainConfigProvider } from "../../api/common/DomainConfigProvider.js"
+import { SecondFactorHandler } from "./SecondFactorHandler.js"
+import { CredentialsProvider } from "../credentials/CredentialsProvider.js"
 
 type AuthData = {
 	readonly sessionId: IdTuple
@@ -49,6 +51,8 @@ export class SecondFactorAuthDialog {
 		private readonly domainConfigProvider: DomainConfigProvider,
 		private readonly authData: AuthData,
 		private readonly onClose: Thunk,
+		private readonly secondFactorHandler: SecondFactorHandler,
+		private readonly credentialsProvider: CredentialsProvider,
 	) {}
 
 	/**
@@ -60,8 +64,18 @@ export class SecondFactorAuthDialog {
 		domainConfigProvider: DomainConfigProvider,
 		authData: AuthData,
 		onClose: Thunk,
+		secondFactorHandler: SecondFactorHandler,
+		credentialsProvider: CredentialsProvider,
 	): SecondFactorAuthDialog {
-		const dialog = new SecondFactorAuthDialog(webauthnClient, loginFacade, domainConfigProvider, authData, onClose)
+		const dialog = new SecondFactorAuthDialog(
+			webauthnClient,
+			loginFacade,
+			domainConfigProvider,
+			authData,
+			onClose,
+			secondFactorHandler,
+			credentialsProvider,
+		)
 
 		dialog.show()
 
@@ -231,6 +245,6 @@ export class SecondFactorAuthDialog {
 	private async recoverLogin(mailAddress: string) {
 		this.cancel()
 		const dialog = await import("../../login/recover/RecoverLoginDialog")
-		dialog.show(mailAddress, "secondFactor")
+		dialog.show(this.secondFactorHandler, this.credentialsProvider, mailAddress, "secondFactor")
 	}
 }

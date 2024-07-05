@@ -67,6 +67,7 @@ import { isCustomizationEnabledForCustomer } from "../common/api/common/utils/Cu
 import { notifications } from "../common/gui/Notifications.js"
 import { CalendarInviteHandler } from "../calendar-app/calendar/view/CalendarInvites.js"
 import type { AlarmScheduler } from "../calendar-app/calendar/date/AlarmScheduler.js"
+import { SearchBar } from "./search/SearchBar.js"
 
 assertMainOrNode()
 
@@ -76,6 +77,7 @@ class MailLocator {
 	minimizedMailModel!: MinimizedMailEditorViewModel
 
 	search!: SearchModel
+	searchBar!: SearchBar
 	credentialsProvider!: CredentialsProvider
 	fileController!: FileController
 	secondFactorHandler!: SecondFactorHandler
@@ -93,6 +95,7 @@ class MailLocator {
 		this.minimizedMailModel = new MinimizedMailEditorViewModel()
 		// TODO: remove calendar events repository from mailLocator when splitting search
 		this.search = new SearchModel(locator.searchFacade, async () => null)
+		this.searchBar = new SearchBar(this.search)
 		this.infoMessageHandler = new InfoMessageHandler(this.search)
 
 		if (!isBrowser()) {
@@ -101,7 +104,7 @@ class MailLocator {
 			const { WebInterWindowEventFacade } = await import("../common/native/main/WebInterWindowEventFacade.js")
 			this.nativeInterfaces = createNativeInterfaces(
 				locator.webMobileFacade,
-				new WebDesktopFacade(),
+				new WebDesktopFacade(mailLocator.native),
 				new WebInterWindowEventFacade(locator.logins, windowFacade, deviceConfig),
 				new MailWebCommonNativeFacade(),
 				locator.cryptoFacade,
@@ -133,15 +136,16 @@ class MailLocator {
 				isApp(),
 			)
 		}
+		this.credentialsProvider = await this.createCredentialsProvider()
 		this.secondFactorHandler = new SecondFactorHandler(
 			locator.eventController,
 			locator.entityClient,
 			this.webAuthn,
 			locator.loginFacade,
 			locator.domainConfigProvider(),
+			mailLocator.credentialsProvider,
 		)
 		this.loginListener = new PageContextLoginListener(this.secondFactorHandler)
-		this.credentialsProvider = await this.createCredentialsProvider()
 
 		this.newsModel = new NewsModel(locator.serviceExecutor, deviceConfig, async (name: string) => {
 			switch (name) {
@@ -157,7 +161,7 @@ class MailLocator {
 				case "referralLink":
 					const { ReferralLinkNews } = await import("../common/misc/news/items/ReferralLinkNews.js")
 					const dateProvider = await locator.noZoneDateProvider()
-					return new ReferralLinkNews(this.newsModel, dateProvider, locator.logins.getUserController())
+					return new ReferralLinkNews(this.newsModel, dateProvider, locator.logins.getUserController(), mailLocator.systemFacade)
 				case "newPlans":
 					const { NewPlansNews } = await import("../common/misc/news/items/NewPlansNews.js")
 					return new NewPlansNews(this.newsModel, locator.logins.getUserController())
@@ -339,6 +343,9 @@ class MailLocator {
 			locator.customerFacade,
 			() => this.showSetupWizard(),
 			() => this.appPartialLoginSuccessActions(),
+			this.calendarModel,
+			this.pushService,
+			this.newsModel,
 		)
 	})
 
@@ -381,6 +388,7 @@ class MailLocator {
 				conversationViewModelFactory,
 				redraw,
 				deviceConfig.getMailAutoSelectBehavior(),
+				mailLocator.calendarModel,
 			)
 		}
 	}
@@ -469,7 +477,16 @@ class MailLocator {
 		if (isApp()) {
 			const { showSetupWizard } = await import("../common/native/main/wizard/SetupWizard.js")
 			// TODO: fix in setup wizard story #7150, handle nativeContactSyncManager and contactImporter in mailLocator
-			return showSetupWizard(this.systemPermissionHandler, locator.webMobileFacade, null, this.systemFacade, this.credentialsProvider, null, deviceConfig)
+			return showSetupWizard(
+				this.systemPermissionHandler,
+				locator.webMobileFacade,
+				null,
+				this.systemFacade,
+				this.credentialsProvider,
+				null,
+				deviceConfig,
+				mailLocator.pushService,
+			)
 		}
 	}
 	readonly credentialFormatMigrator: () => Promise<CredentialFormatMigrator> = lazyMemoized(async () => {
@@ -584,6 +601,7 @@ class MailLocator {
 			ownAttendee,
 			lazyIndexEntry,
 			async (mode: CalendarOperation) => this.calendarEventModel(mode, selectedEvent, mailboxDetails, mailboxProperties, null),
+			this.recipientsSearchModel,
 		)
 
 		// If we have a preview model we want to display the description

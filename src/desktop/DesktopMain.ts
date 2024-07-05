@@ -69,7 +69,7 @@ import { SseStorage } from "./sse/SseStorage.js"
 import { DesktopSseDelay } from "./sse/reconnectDelay.js"
 import { KeychainEncryption } from "./credentials/KeychainEncryption.js"
 import { Argon2IDExports } from "@tutao/tutanota-crypto"
-import { DefaultDateProvider } from "../common/calendarFunctionality/commonCalendarUtils.js"
+import { DefaultDateProvider } from "../common/calendarFunctionality/CommonDateUtils"
 
 /**
  * Should be injected during build time.

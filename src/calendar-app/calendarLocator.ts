@@ -54,6 +54,10 @@ import { SearchModel } from "../mail-app/search/model/SearchModel.js"
 import { SearchViewModel } from "../mail-app/search/view/SearchViewModel.js"
 import { InfoMessageHandler } from "../common/gui/InfoMessageHandler.js"
 import type { AlarmScheduler } from "./calendar/date/AlarmScheduler.js"
+import { DrawerMenuAttrs } from "../common/gui/nav/DrawerMenu.js"
+import { SettingsFacade } from "../common/native/common/generatedipc/SettingsFacade.js"
+import { DesktopSystemFacade } from "../common/native/common/generatedipc/DesktopSystemFacade.js"
+import { SearchBar } from "../mail-app/search/SearchBar.js"
 
 class CalendarLocator {
 	private entropyCollector!: EntropyCollector
@@ -69,7 +73,10 @@ class CalendarLocator {
 	loginListener!: PageContextLoginListener
 	newsModel!: NewsModel
 	search!: SearchModel
+	searchBar!: SearchBar
 	infoMessageHandler!: InfoMessageHandler
+	desktopSettingsFacade!: SettingsFacade
+	desktopSystemFacade!: DesktopSystemFacade
 
 	// Unique to Calendar Locator
 	async credentialsRemovalHandler(): Promise<CredentialRemovalHandler> {
@@ -171,6 +178,7 @@ class CalendarLocator {
 			ownAttendee,
 			lazyIndexEntry,
 			async (mode: CalendarOperation) => this.calendarEventModel(mode, selectedEvent, mailboxDetails, mailboxProperties, null),
+			this.recipientsSearchModel,
 		)
 
 		// If we have a preview model we want to display the description
@@ -213,6 +221,7 @@ class CalendarLocator {
 		const dateProvider = new DefaultDateProvider()
 		return new AlarmScheduler(dateProvider, await locator.scheduler())
 	})
+
 	// **** end of Unique to Calendar Locator
 
 	async init(): Promise<void> {
@@ -226,16 +235,20 @@ class CalendarLocator {
 	}
 
 	async createInstances() {
+		this.credentialsProvider = await this.createCredentialsProvider()
 		this.secondFactorHandler = new SecondFactorHandler(
 			locator.eventController,
 			locator.entityClient,
 			this.webAuthn,
 			locator.loginFacade,
 			locator.domainConfigProvider(),
+			calendarLocator.secondFactorHandler,
+			calendarLocator.credentialsProvider,
 		)
 		this.loginListener = new PageContextLoginListener(this.secondFactorHandler)
-		this.credentialsProvider = await this.createCredentialsProvider()
+		locator.logins.init(this.loginListener)
 		this.search = new SearchModel(locator.searchFacade, () => this.calendarEventsRepository())
+		this.searchBar = new SearchBar(this.search)
 		this.infoMessageHandler = new InfoMessageHandler(this.search)
 
 		this.newsModel = new NewsModel(locator.serviceExecutor, deviceConfig, async (name: string) => {
@@ -252,7 +265,7 @@ class CalendarLocator {
 				case "referralLink":
 					const { ReferralLinkNews } = await import("../common/misc/news/items/ReferralLinkNews.js")
 					const dateProvider = await locator.noZoneDateProvider()
-					return new ReferralLinkNews(this.newsModel, dateProvider, locator.logins.getUserController())
+					return new ReferralLinkNews(this.newsModel, dateProvider, locator.logins.getUserController(), calendarLocator.systemFacade)
 				case "newPlans":
 					const { NewPlansNews } = await import("../common/misc/news/items/NewPlansNews.js")
 					return new NewPlansNews(this.newsModel, locator.logins.getUserController())
@@ -270,7 +283,7 @@ class CalendarLocator {
 
 			this.nativeInterfaces = createNativeInterfaces(
 				locator.webMobileFacade,
-				new WebDesktopFacade(),
+				new WebDesktopFacade(calendarLocator.native),
 				new WebInterWindowEventFacade(locator.logins, windowFacade, deviceConfig),
 				new CalendarWebCommonNativeFacade(),
 				locator.cryptoFacade,
@@ -290,6 +303,10 @@ class CalendarLocator {
 			this.searchTextFacade = desktopInterfaces.searchTextFacade
 			this.interWindowEventSender = desktopInterfaces.interWindowEventSender
 			this.webAuthn = new WebauthnClient(new WebAuthnFacadeSendDispatcher(this.native), locator.domainConfigProvider(), isApp())
+			if (isDesktop()) {
+				this.desktopSettingsFacade = desktopInterfaces.desktopSettingsFacade
+				this.desktopSystemFacade = desktopInterfaces.desktopSystemFacade
+			}
 		} else if (isAndroidApp() || isIOSApp()) {
 			const { SystemPermissionHandler } = await import("../common/native/main/SystemPermissionHandler.js")
 			this.systemPermissionHandler = new SystemPermissionHandler(this.systemFacade)
@@ -328,6 +345,7 @@ class CalendarLocator {
 				null,
 				redraw,
 				deviceConfig.getMailAutoSelectBehavior(),
+				calendarLocator.calendarModel,
 			)
 		}
 	}
@@ -345,6 +363,9 @@ class CalendarLocator {
 			locator.customerFacade,
 			() => this.showSetupWizard(),
 			() => this.appPartialLoginSuccessActions(),
+			this.calendarModel,
+			this.pushService,
+			this.newsModel,
 		)
 	})
 
@@ -412,6 +433,14 @@ class CalendarLocator {
 		return this.getNativeInterface("nativeCredentialsFacade")
 	}
 
+	async drawerAttrsFactory(): Promise<() => DrawerMenuAttrs> {
+		return () => ({
+			logins: locator.logins,
+			newsModel: this.newsModel,
+			desktopSystemFacade: this.desktopSystemFacade,
+		})
+	}
+
 	private getNativeInterface<T extends keyof NativeInterfaces>(name: T): NativeInterfaces[T] {
 		if (!this.nativeInterfaces) {
 			throw new ProgrammingError(`Tried to use ${name} in web`)
@@ -424,7 +453,16 @@ class CalendarLocator {
 		if (isApp()) {
 			const { showSetupWizard } = await import("../common/native/main/wizard/SetupWizard.js")
 			// TODO: fix in setup wizard story #7150, handle nativeContactSyncManager and contactImporter in mailLocator
-			return showSetupWizard(this.systemPermissionHandler, locator.webMobileFacade, null, this.systemFacade, this.credentialsProvider, null, deviceConfig)
+			return showSetupWizard(
+				this.systemPermissionHandler,
+				locator.webMobileFacade,
+				null,
+				this.systemFacade,
+				this.credentialsProvider,
+				null,
+				deviceConfig,
+				calendarLocator.pushService,
+			)
 		}
 	}
 

@@ -10,8 +10,9 @@ import type { DateWrapper, RepeatRule, UserAlarmInfo } from "../../../common/api
 import { DateTime } from "luxon"
 import { CALENDAR_MIME_TYPE } from "../../../common/file/FileController"
 import { getLetId } from "../../../common/api/common/utils/EntityUtils"
-import { getAllDayDateLocal, getTimeZone, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
-import { parseAlarmInterval } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { isAllDayEvent, parseAlarmInterval } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { getAllDayDateLocal } from "../../../common/calendarFunctionality/CommonDateUtils.js"
 
 /** create an ical data file that can be attached to an invitation/update/cancellation/response mail */
 export function makeInvitationCalendarFile(event: CalendarEvent, method: CalendarMethod, now: Date, zone: string): DataFile {

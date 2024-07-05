@@ -94,7 +94,7 @@ export class ContactImporter {
 
 	private async importContactsFromDevice() {
 		assert(isApp(), "isApp")
-		const contactBooks = await showProgressDialog("pleaseWait_msg", locator.mobileContactsFacade.getContactBooks())
+		const contactBooks = await showProgressDialog("pleaseWait_msg", mailLocator.mobileContactsFacade.getContactBooks())
 		let books: readonly ContactBook[]
 		if (contactBooks.length === 0) {
 			return
@@ -111,7 +111,7 @@ export class ContactImporter {
 		const contactGroupId = await locator.contactModel.getContactGroupId()
 		const contactsToImport: Contact[] = (
 			await promiseMap(books, async (book) => {
-				const structuredContacts = await locator.mobileContactsFacade.getContactsInContactBook(
+				const structuredContacts = await mailLocator.mobileContactsFacade.getContactsInContactBook(
 					book.id,
 					locator.logins.getUserController().loginUsername,
 				)

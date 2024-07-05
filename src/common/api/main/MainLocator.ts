@@ -287,8 +287,6 @@ class MainLocator {
 		this.serviceExecutor = serviceExecutor
 		this.sqlCipherFacade = sqlCipherFacade
 		this.logins = new LoginController()
-		// Should be called elsewhere later e.g. in mainLocator
-		this.logins.init()
 		this.eventController = new EventController(locator.logins)
 		this.progressTracker = new ProgressTracker()
 		this.entityClient = new EntityClient(restInterface)

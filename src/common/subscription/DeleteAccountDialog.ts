@@ -10,8 +10,9 @@ import { getEtId } from "../api/common/utils/EntityUtils"
 import { CloseEventBusOption } from "../api/common/TutanotaConstants.js"
 import { SurveyData } from "../api/entities/sys/TypeRefs.js"
 import { PasswordField } from "../misc/passwords/PasswordField.js"
+import { CredentialsProvider } from "../misc/credentials/CredentialsProvider.js"
 
-export function showDeleteAccountDialog(surveyData: SurveyData | null = null) {
+export function showDeleteAccountDialog(credentialsProvider: CredentialsProvider, surveyData: SurveyData | null = null) {
 	let takeover = ""
 	let password = ""
 	const userId = getEtId(locator.logins.getUserController().user)
@@ -42,7 +43,7 @@ export function showDeleteAccountDialog(surveyData: SurveyData | null = null) {
 		okAction: async () => {
 			const isDeleted = await deleteAccount(takeover, password, surveyData)
 			if (isDeleted) {
-				await locator.credentialsProvider.deleteByUserId(userId)
+				await credentialsProvider.deleteByUserId(userId)
 				m.route.set("/login", { noAutoLogin: true })
 			}
 		},

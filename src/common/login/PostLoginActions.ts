@@ -34,6 +34,9 @@ import { shouldShowStorageWarning, shouldShowUpgradeReminder } from "./PostLogin
 import { UserManagementFacade } from "../api/worker/facades/lazy/UserManagementFacade.js"
 import { CustomerFacade } from "../api/worker/facades/lazy/CustomerFacade.js"
 import { deviceConfig } from "../misc/DeviceConfig.js"
+import { CalendarModel } from "../calendarFunctionality/CalendarModel.js"
+import { NativePushServiceApp } from "../native/main/NativePushServiceApp.js"
+import { NewsModel } from "../misc/news/NewsModel.js"
 
 /**
  * This is a collection of all things that need to be initialized/global state to be set after a user has logged in successfully.
@@ -51,6 +54,9 @@ export class PostLoginActions implements PostLoginAction {
 		private readonly customerFacade: CustomerFacade,
 		private readonly showSetupWizard: () => unknown,
 		private readonly appPartialLoginSuccessActions: () => unknown,
+		private readonly calendarModel: () => Promise<CalendarModel>,
+		private readonly pushService: NativePushServiceApp,
+		private readonly newsModel: NewsModel,
 	) {}
 
 	async onPartialLoginSuccess(loggedInEvent: LoggedInEvent): Promise<void> {
@@ -129,7 +135,7 @@ export class PostLoginActions implements PostLoginAction {
 		if (!isAdminClient()) {
 			// If it failed during the partial login due to missing cache entries we will give it another spin here. If it didn't fail then it's just a noop
 			await locator.mailModel.init()
-			const calendarModel = await locator.calendarModel()
+			const calendarModel = await this.calendarModel()
 			await calendarModel.init()
 			await this.remindActiveOutOfOfficeNotification()
 		}
@@ -141,7 +147,7 @@ export class PostLoginActions implements PostLoginAction {
 				// we don't want to ask for it while dialog is shown, we will ask in
 				// the dialog anyway.
 				// After dialog is finished or dismissed the setup is "complete".
-				locator.pushService.register()
+				this.pushService.register()
 			} else {
 				console.log("Skipping registering for notifications while setup dialog is shown")
 			}
@@ -165,7 +171,7 @@ export class PostLoginActions implements PostLoginAction {
 		locator.usageTestController.setTests(await usageTestModel.loadActiveUsageTests())
 
 		// Needs to be called after UsageTestModel.init() if the UsageOptInNews is live! (its isShown() requires an initialized UsageTestModel)
-		await locator.newsModel.loadNewsIds()
+		await this.newsModel.loadNewsIds()
 
 		// Redraw to render usage tests and news, among other things that may have changed.
 		m.redraw()
@@ -248,7 +254,7 @@ export class PostLoginActions implements PostLoginAction {
 	private async enforcePasswordChange(): Promise<void> {
 		if (this.logins.getUserController().user.requirePasswordUpdate) {
 			const { showChangeOwnPasswordDialog } = await import("../../mail-app/settings/login/ChangePasswordDialogs.js")
-			await showChangeOwnPasswordDialog(false)
+			await showChangeOwnPasswordDialog(false, this.credentialsProvider)
 		}
 
 		if (location.hostname === Const.DEFAULT_APP_DOMAIN) {

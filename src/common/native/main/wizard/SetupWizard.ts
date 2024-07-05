@@ -19,6 +19,7 @@ import { MobileSystemFacade } from "../../common/generatedipc/MobileSystemFacade
 import { CredentialsProvider } from "../../../misc/credentials/CredentialsProvider.js"
 import { NativeContactsSyncManager } from "../../../../mail-app/contacts/model/NativeContactsSyncManager.js"
 import { locator } from "../../../api/main/MainLocator.js"
+import type { NativePushServiceApp } from "../NativePushServiceApp.js"
 
 export function renderPermissionButton(permissionName: TranslationKey, isPermissionGranted: boolean, onclick: ClickHandler) {
 	return renderBannerButton(isPermissionGranted ? "granted_msg" : permissionName, onclick, isPermissionGranted)
@@ -45,17 +46,23 @@ export async function showSetupWizard(
 	credentialsProvider: CredentialsProvider,
 	contactSyncManager: NativeContactsSyncManager | null,
 	deviceConfig: DeviceConfig,
+	pushService: NativePushServiceApp,
 ): Promise<void> {
 	const wizardPages = [
 		wizardPageWrapper(SetupCongratulationsPage, new SetupCongratulationsPageAttrs()),
 		wizardPageWrapper(
 			SetupNotificationsPage,
-			new SetupNotificationsPageAttrs(await systemPermissionHandler.queryPermissionsState(), webMobileFacade.getIsAppVisible(), systemPermissionHandler),
+			new SetupNotificationsPageAttrs(
+				await systemPermissionHandler.queryPermissionsState(),
+				webMobileFacade.getIsAppVisible(),
+				systemPermissionHandler,
+				pushService,
+			),
 		),
 		wizardPageWrapper(SetupThemePage, new SetupThemePageAttrs()),
 		// TODO: fix in setup wizard story #7150, contactsSyncManager and mailLocater
 		wizardPageWrapper(SetupContactsPage, new SetupContactsPageAttrs(null, null, systemFacade)),
-		wizardPageWrapper(SetupLockPage, new SetupLockPageAttrs(locator.systemFacade)),
+		wizardPageWrapper(SetupLockPage, new SetupLockPageAttrs(systemFacade)),
 	]
 	const deferred = defer<void>()
 

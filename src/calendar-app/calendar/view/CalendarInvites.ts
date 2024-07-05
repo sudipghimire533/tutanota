@@ -1,24 +1,25 @@
 import { parseCalendarFile } from "../export/CalendarImporter.js"
 import type { CalendarEvent, CalendarEventAttendee, File as TutanotaFile, Mail, MailboxProperties } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { locator } from "../../../common/api/main/MainLocator.js"
-import { CalendarAttendeeStatus, CalendarMethod, ConversationType, FeatureType, getAsEnumValue } from "../../../common/api/common/TutanotaConstants.js"
-import { assert, assertNotNull, clone, filterInt, noOp, Require } from "@tutao/tutanota-utils"
+import { CalendarAttendeeStatus, CalendarMethod, ConversationType, getAsEnumValue } from "../../../common/api/common/TutanotaConstants.js"
+import { assert, assertNotNull, clone, filterInt, Require } from "@tutao/tutanota-utils"
 import { CalendarNotificationSender } from "./CalendarNotificationSender.js"
 import { Dialog } from "../../../common/gui/base/Dialog.js"
 import { UserError } from "../../../common/api/main/UserError.js"
 import { DataFile } from "../../../common/api/common/DataFile.js"
 import { Recipient } from "../../../common/api/common/recipients/Recipient.js"
 import { SendMailModel } from "../../../common/mailFunctionality/SendMailModel.js"
-import { CalendarEventModel, CalendarOperation, EventType } from "../gui/eventeditor-model/CalendarEventModel.js"
+import { EventType } from "../gui/eventeditor-model/CalendarEventModel.js"
 import { CalendarNotificationModel } from "../gui/eventeditor-model/CalendarNotificationModel.js"
 import { ResolveMode } from "../../../common/api/main/RecipientsModel.js"
-import { isCustomizationEnabledForCustomer } from "../../../common/api/common/utils/CustomerUtils.js"
 import { getEventType } from "../gui/CalendarGuiUtils.js"
 import { MailboxDetail, MailModel } from "../../../common/mailFunctionality/MailModel.js"
 import { CalendarModel } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { LoginController } from "../../../common/api/main/LoginController.js"
 import { RecipientField } from "../../../common/mailFunctionality/CommonMailUtils.js"
-import { findAttendeeInAddresses, findPrivateCalendar } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { findAttendeeInAddresses, findPrivateCalendar } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { FileController } from "../../../common/file/FileController.js"
+import { CalendarEventPreviewViewModel } from "../gui/eventpopup/CalendarEventPreviewViewModel.js"
 
 // not picking the status directly from CalendarEventAttendee because it's a NumberString
 export type Guest = Recipient & { status: CalendarAttendeeStatus }
@@ -48,53 +49,16 @@ async function getParsedEvent(fileData: DataFile): Promise<ParsedIcalFileContent
 	}
 }
 
-export async function showEventDetails(event: CalendarEvent, eventBubbleRect: ClientRect, mail: Mail | null): Promise<void> {
-	const [latestEvent, { CalendarEventPopup }, { CalendarEventPreviewViewModel }, { htmlSanitizer }] = await Promise.all([
-		getLatestEvent(event),
+export async function showEventDetails(eventBubbleRect: ClientRect, calendarEventPreviewViewModel: CalendarEventPreviewViewModel): Promise<void> {
+	const [{ CalendarEventPopup }, { htmlSanitizer }] = await Promise.all([
 		import("../gui/eventpopup/CalendarEventPopup.js"),
-		import("../gui/eventpopup/CalendarEventPreviewViewModel.js"),
 		import("../../../common/misc/HtmlSanitizer.js"),
 	])
-
-	let eventType: EventType
-	let editModelsFactory: (mode: CalendarOperation) => Promise<CalendarEventModel | null>
-	let hasBusinessFeature: boolean
-	let ownAttendee: CalendarEventAttendee | null = null
-	const lazyIndexEntry = async () => (latestEvent.uid != null ? locator.calendarFacade.getEventsByUid(latestEvent.uid) : null)
-	if (!locator.logins.getUserController().isInternalUser()) {
-		// external users cannot delete/edit events as they have no calendar.
-		eventType = EventType.EXTERNAL
-		editModelsFactory = () => new Promise(noOp)
-		hasBusinessFeature = false
-	} else {
-		const [calendarInfos, mailboxDetails, customer] = await Promise.all([
-			(await locator.calendarModel()).getCalendarInfos(),
-			locator.mailModel.getUserMailboxDetails(),
-			locator.logins.getUserController().loadCustomer(),
-		])
-		const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-		const ownMailAddresses = mailboxProperties.mailAddressProperties.map(({ mailAddress }) => mailAddress)
-		ownAttendee = findAttendeeInAddresses(latestEvent.attendees, ownMailAddresses)
-		eventType = getEventType(latestEvent, calendarInfos, ownMailAddresses, locator.logins.getUserController().user)
-		editModelsFactory = (mode: CalendarOperation) => locator.calendarEventModel(mode, latestEvent, mailboxDetails, mailboxProperties, mail)
-		hasBusinessFeature =
-			isCustomizationEnabledForCustomer(customer, FeatureType.BusinessFeatureEnabled) || (await locator.logins.getUserController().isNewPaidPlan())
-	}
-
-	const viewModel = new CalendarEventPreviewViewModel(
-		latestEvent,
-		await locator.calendarModel(),
-		eventType,
-		hasBusinessFeature,
-		ownAttendee,
-		lazyIndexEntry,
-		editModelsFactory,
-	)
-	new CalendarEventPopup(viewModel, eventBubbleRect, htmlSanitizer).show()
+	new CalendarEventPopup(calendarEventPreviewViewModel, eventBubbleRect, htmlSanitizer).show()
 }
 
-export async function getEventsFromFile(file: TutanotaFile, invitedConfidentially: boolean): Promise<ParsedIcalFileContent> {
-	const dataFile = await locator.fileController.getAsDataFile(file)
+export async function getEventsFromFile(file: TutanotaFile, invitedConfidentially: boolean, fileController: FileController): Promise<ParsedIcalFileContent> {
+	const dataFile = await fileController.getAsDataFile(file)
 	const contents = await getParsedEvent(dataFile)
 	for (const event of contents?.events ?? []) {
 		event.invitedConfidentially = invitedConfidentially
@@ -107,7 +71,7 @@ export async function getEventsFromFile(file: TutanotaFile, invitedConfidentiall
  * any calendar (because it has not been stored yet, e.g. in case of invite)
  * the given event is returned.
  */
-export async function getLatestEvent(event: CalendarEvent): Promise<CalendarEvent> {
+export async function getLatestEvent(event: CalendarEvent, calendarModel: CalendarModel): Promise<CalendarEvent> {
 	const uid = event.uid
 	if (uid == null) return event
 	const existingEvents = await locator.calendarFacade.getEventsByUid(uid)
@@ -123,7 +87,6 @@ export async function getLatestEvent(event: CalendarEvent): Promise<CalendarEven
 	if (existingEvent == null) return event
 
 	if (filterInt(existingEvent.sequence) < filterInt(event.sequence)) {
-		const calendarModel = await locator.calendarModel()
 		return await calendarModel.updateEventWithExternal(existingEvent, event)
 	} else {
 		return existingEvent

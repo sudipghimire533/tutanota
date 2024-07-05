@@ -81,6 +81,7 @@ import {
 	assertSystemFolderOfType,
 } from "../../../common/mailFunctionality/CommonMailUtils.js"
 import { isSystemNotification, isTutanotaTeamMail, isNoReplyTeamAddress } from "../MailUtils.js"
+import { mailLocator } from "../../mailLocator.js"
 
 export const enum ContentBlockingStatus {
 	Block = "0",
@@ -750,7 +751,7 @@ export class MailViewerViewModel {
 		if (calendarFile && (mail.method === MailMethod.ICAL_REQUEST || mail.method === MailMethod.ICAL_REPLY) && mail.state === MailState.RECEIVED) {
 			Promise.all([
 				import("../../../calendar-app/calendar/view/CalendarInvites.js").then(({ getEventsFromFile }) =>
-					getEventsFromFile(calendarFile, mail.confidential),
+					getEventsFromFile(calendarFile, mail.confidential, mailLocator.fileController),
 				),
 				this.getSenderOfResponseMail(),
 			]).then(([contents, recipient]) => {

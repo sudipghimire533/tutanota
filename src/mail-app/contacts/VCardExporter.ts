@@ -6,6 +6,7 @@ import { ContactAddressType, ContactPhoneNumberType } from "../../common/api/com
 import { assertMainOrNode } from "../../common/api/common/Env"
 import { locator } from "../../common/api/main/MainLocator"
 import { getSocialUrl, getWebsiteUrl } from "../../common/contactsFunctionality/ContactUtils.js"
+import { mailLocator } from "../mailLocator.js"
 
 assertMainOrNode()
 
@@ -21,7 +22,7 @@ export function exportContacts(contacts: Contact[]): Promise<void> {
 		parent: null,
 		subFiles: null,
 	})
-	return locator.fileController.saveDataFile(convertToDataFile(tmpFile, data))
+	return mailLocator.fileController.saveDataFile(convertToDataFile(tmpFile, data))
 }
 
 /**

@@ -5,20 +5,18 @@ import { getSpamRuleFieldToName, getSpamRuleTypeNameMapping, showAddSpamRuleDial
 import { getSpamRuleField, GroupType, OperationType, SpamRuleFieldType, SpamRuleType } from "../../common/api/common/TutanotaConstants"
 import {
 	AuditLogEntry,
+	AuditLogEntryTypeRef,
+	createEmailSenderListElement,
 	createSurveyData,
 	Customer,
 	CustomerInfo,
-	CustomerServerProperties,
-	DomainInfo,
-	GroupInfo,
-} from "../../common/api/entities/sys/TypeRefs.js"
-import {
-	AuditLogEntryTypeRef,
-	createEmailSenderListElement,
 	CustomerInfoTypeRef,
 	CustomerPropertiesTypeRef,
+	CustomerServerProperties,
 	CustomerServerPropertiesTypeRef,
 	CustomerTypeRef,
+	DomainInfo,
+	GroupInfo,
 	GroupInfoTypeRef,
 	GroupTypeRef,
 	RejectedSenderTypeRef,
@@ -63,6 +61,7 @@ import { EntityUpdateData, isUpdateForTypeRef } from "../../common/api/common/ut
 import { LoginButton } from "../../common/gui/base/buttons/LoginButton.js"
 import { showLeavingUserSurveyWizard } from "../../common/subscription/LeavingUserSurveyWizard.js"
 import { SURVEY_VERSION_NUMBER } from "../../common/subscription/LeavingUserSurveyConstants.js"
+import { CredentialsProvider } from "../../common/misc/credentials/CredentialsProvider.js"
 
 assertMainOrNode()
 // Number of days for that we load rejected senders
@@ -97,7 +96,7 @@ export class GlobalSettingsViewer implements UpdatableSettingsViewer {
 			.then((customer) => locator.entityClient.load(CustomerPropertiesTypeRef, neverNull(customer.properties))),
 	)
 
-	constructor() {
+	constructor(private readonly credentialsProvider: CredentialsProvider) {
 		this.props.map((props) => {
 			this.requirePasswordUpdateAfterReset = props.requirePasswordUpdateAfterReset
 			this.saveIpAddress = props.saveEncryptedIpAddressInSession
@@ -324,9 +323,9 @@ export class GlobalSettingsViewer implements UpdatableSettingsViewer {
 													reason: reason.reason,
 													version: SURVEY_VERSION_NUMBER,
 												})
-												showDeleteAccountDialog(surveyData)
+												showDeleteAccountDialog(this.credentialsProvider, surveyData)
 											} else {
-												showDeleteAccountDialog()
+												showDeleteAccountDialog(this.credentialsProvider)
 											}
 										})
 									},

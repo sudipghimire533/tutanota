@@ -7,7 +7,7 @@ import type { Key, Shortcut } from "../../../common/misc/KeyManager"
 import { isKeyPressed, keyManager } from "../../../common/misc/KeyManager"
 import { Icons } from "../../../common/gui/base/icons/Icons"
 import { downcast, getStartOfDay, isSameDayOfDate, ofClass } from "@tutao/tutanota-utils"
-import type { CalendarEvent, GroupSettings, UserSettingsGroupRoot } from "../../../common/api/entities/tutanota/TypeRefs.js"
+import type { CalendarEvent, GroupSettings, Mail, MailboxProperties, UserSettingsGroupRoot } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { createGroupSettings } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { defaultCalendarColor, GroupType, Keys, reverse, ShareCapability, TabIndex, TimeFormat, WeekStart } from "../../../common/api/common/TutanotaConstants"
 import { locator } from "../../../common/api/main/MainLocator"
@@ -47,7 +47,7 @@ import { CalendarEventBubbleKeyDownHandler, CalendarViewModel, MouseOrPointerEve
 import { showNewCalendarEventEditDialog } from "../gui/eventeditor-view/CalendarEventEditDialog.js"
 import { CalendarEventPopup } from "../gui/eventpopup/CalendarEventPopup.js"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog"
-import type { CalendarInfo } from "../../../common/calendarFunctionality/CalendarModel.js"
+import { CalendarInfo, CalendarModel } from "../../../common/calendarFunctionality/CalendarModel.js"
 import type Stream from "mithril/stream"
 import { IconButton } from "../../../common/gui/base/IconButton.js"
 import { createDropdown, PosRect } from "../../../common/gui/base/Dropdown.js"
@@ -63,10 +63,14 @@ import { CalendarDesktopToolbar } from "./CalendarDesktopToolbar.js"
 import { LazySearchBar } from "../../../common/misc/LazySearchBar.js"
 import { Time } from "../date/Time.js"
 import { DaySelectorSidebar } from "../gui/day-selector/DaySelectorSidebar.js"
-import { CalendarOperation } from "../gui/eventeditor-model/CalendarEventModel.js"
+import { CalendarEventModel, CalendarOperation } from "../gui/eventeditor-model/CalendarEventModel.js"
 import { DaySelectorPopup } from "../gui/day-selector/DaySelectorPopup.js"
 import { CalendarEventPreviewViewModel } from "../gui/eventpopup/CalendarEventPreviewViewModel.js"
-import { getEventWithDefaultTimes, getNextHalfHour, getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getEventWithDefaultTimes } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { FileController } from "../../../common/file/FileController.js"
+import { getNextHalfHour, getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { MailboxDetail } from "../../../common/mailFunctionality/MailModel.js"
+import { RecipientsSearchModel } from "../../../common/misc/RecipientsSearchModel.js"
 
 export type GroupColors = Map<Id, string>
 
@@ -74,6 +78,17 @@ export interface CalendarViewAttrs extends TopLevelAttrs {
 	drawerAttrs: DrawerMenuAttrs
 	header: AppHeaderAttrs
 	calendarViewModel: CalendarViewModel
+	fileController: FileController
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>
+	calendarEventModel: (
+		editMode: CalendarOperation,
+		event: Partial<CalendarEvent>,
+		mailboxDetail: MailboxDetail,
+		mailboxProperties: MailboxProperties,
+		responseTo: Mail | null,
+	) => Promise<CalendarEventModel | null>
+	calendarModel: () => Promise<CalendarModel>
+	calendarEventPreviewModel: (selectedEvent: CalendarEvent, calendars: ReadonlyMap<string, CalendarInfo>) => Promise<CalendarEventPreviewViewModel>
 }
 
 const CalendarViewTypeByValue = reverse(CalendarViewType)
@@ -84,6 +99,20 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 	private readonly viewSlider: ViewSlider
 	private currentViewType: CalendarViewType
 	private readonly viewModel: CalendarViewModel
+	private readonly fileController: FileController
+	private readonly recipientsSearchModel: () => Promise<RecipientsSearchModel>
+	private readonly calendarEventModel: (
+		editMode: CalendarOperation,
+		event: Partial<CalendarEvent>,
+		mailboxDetail: MailboxDetail,
+		mailboxProperties: MailboxProperties,
+		responseTo: Mail | null,
+	) => Promise<CalendarEventModel | null>
+	private readonly calendarModel: () => Promise<CalendarModel>
+	private readonly calendarEventPreviewModel: (
+		selectedEvent: CalendarEvent,
+		calendars: ReadonlyMap<string, CalendarInfo>,
+	) => Promise<CalendarEventPreviewViewModel>
 	// For sanitizing event descriptions, which get rendered as html in the CalendarEventPopup
 	private readonly htmlSanitizer: Promise<HtmlSanitizer>
 	private redrawIntervalId: number | null = null
@@ -98,6 +127,11 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 		this.viewModel = attrs.calendarViewModel
 		this.currentViewType = deviceConfig.getDefaultCalendarView(userId) || CalendarViewType.MONTH
 		this.htmlSanitizer = import("../../../common/misc/HtmlSanitizer").then((m) => m.htmlSanitizer)
+		this.fileController = attrs.fileController
+		this.calendarEventModel = attrs.calendarEventModel
+		this.calendarModel = attrs.calendarModel
+		this.calendarEventPreviewModel = attrs.calendarEventPreviewModel
+		this.recipientsSearchModel = attrs.recipientsSearchModel
 		this.sidebarColumn = new ViewColumn(
 			{
 				view: () =>
@@ -533,9 +567,9 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 
 		const mailboxDetails = await locator.mailModel.getUserMailboxDetails()
 		const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-		const model = await locator.calendarEventModel(CalendarOperation.Create, getEventWithDefaultTimes(dateToUse), mailboxDetails, mailboxProperties, null)
+		const model = await this.calendarEventModel(CalendarOperation.Create, getEventWithDefaultTimes(dateToUse), mailboxDetails, mailboxProperties, null)
 		if (model) {
-			await showNewCalendarEventEditDialog(model)
+			await showNewCalendarEventEditDialog(model, this.recipientsSearchModel)
 		}
 	}
 
@@ -613,7 +647,7 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 			"add_action",
 			false,
 			async (dialog, properties) => {
-				const calendarModel = await locator.calendarModel()
+				const calendarModel = await this.calendarModel()
 				await calendarModel.createCalendar(properties.name, properties.color)
 				dialog.close()
 			},
@@ -707,7 +741,7 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 							if (locator.logins.getUserController().isFreeAccount()) {
 								showNotAvailableForFreeDialog()
 							} else {
-								showGroupSharingDialog(groupInfo, sharedCalendar)
+								showGroupSharingDialog(groupInfo, sharedCalendar, this.recipientsSearchModel)
 							}
 						},
 					},
@@ -731,6 +765,7 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 											alarmInfoList.alarms,
 											new Date(),
 											getTimeZone(),
+											this.fileController,
 										)
 								},
 						  }
@@ -918,14 +953,14 @@ export class CalendarView extends BaseTopLevelView implements TopLevelView<Calen
 	}
 
 	private openDeletePopup(calendarEvent: CalendarEvent, domEvent: KeyboardEvent) {
-		locator.calendarEventPreviewModel(calendarEvent, this.viewModel.calendarInfos).then((eventPreviewModel: CalendarEventPreviewViewModel) => {
+		this.calendarEventPreviewModel(calendarEvent, this.viewModel.calendarInfos).then((eventPreviewModel: CalendarEventPreviewViewModel) => {
 			showDeletePopup(eventPreviewModel, new MouseEvent("click", {}), domEvent.target as HTMLElement)
 		})
 	}
 
 	private async showCalendarEventPopup(selectedEvent: CalendarEvent, eventBubbleRect: PosRect, htmlSanitizerPromise: Promise<HtmlSanitizer>) {
 		const calendars = await this.viewModel.getCalendarInfosCreateIfNeeded()
-		const [popupModel, htmlSanitizer] = await Promise.all([locator.calendarEventPreviewModel(selectedEvent, calendars), htmlSanitizerPromise])
+		const [popupModel, htmlSanitizer] = await Promise.all([this.calendarEventPreviewModel(selectedEvent, calendars), htmlSanitizerPromise])
 
 		new CalendarEventPopup(popupModel, eventBubbleRect, htmlSanitizer).show()
 	}

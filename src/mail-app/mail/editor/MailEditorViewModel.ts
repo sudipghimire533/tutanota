@@ -16,6 +16,7 @@ import { DataFile } from "../../../common/api/common/DataFile"
 import { showFileChooser } from "../../../common/file/FileController.js"
 import { ProgrammingError } from "../../../common/api/common/error/ProgrammingError.js"
 import { AttachmentBubbleAttrs, AttachmentType } from "../../../common/gui/AttachmentBubble.js"
+import { mailLocator } from "../../mailLocator.js"
 
 export async function chooseAndAttachFile(
 	model: SendMailModel,
@@ -38,7 +39,7 @@ export async function chooseAndAttachFile(
 				// we have file refs and want to read them.
 				// this is important for the desktop client so it can attach them as inline images.
 				const dataFiles: Array<DataFile> = (
-					await Promise.all((files as Array<FileReference>).map(async (f) => locator.fileApp.readDataFile(f.location)))
+					await Promise.all((files as Array<FileReference>).map(async (f) => mailLocator.fileApp.readDataFile(f.location)))
 				).filter(isNotNull)
 				model.attachFiles(dataFiles)
 				return dataFiles
@@ -59,7 +60,7 @@ export async function chooseAndAttachFile(
 
 export function showFileChooserForAttachments(boundingRect: ClientRect, fileTypes?: Array<string>): Promise<ReadonlyArray<FileReference | DataFile> | void> {
 	const fileSelector = [Mode.App, Mode.Desktop].includes(env.mode)
-		? locator.fileApp.openFileChooser(boundingRect, fileTypes)
+		? mailLocator.fileApp.openFileChooser(boundingRect, fileTypes)
 		: showFileChooser(true, fileTypes)
 	return fileSelector
 		.catch(
@@ -102,11 +103,11 @@ export function createAttachmentBubbleAttrs(model: SendMailModel, inlineImageEle
 async function _downloadAttachment(attachment: Attachment) {
 	try {
 		if (isFileReference(attachment)) {
-			await locator.fileApp.open(attachment)
+			await mailLocator.fileApp.open(attachment)
 		} else if (isDataFile(attachment)) {
-			await locator.fileController.saveDataFile(attachment)
+			await mailLocator.fileController.saveDataFile(attachment)
 		} else if (isTutanotaFile(attachment)) {
-			await locator.fileController.download(attachment)
+			await mailLocator.fileController.download(attachment)
 		} else {
 			throw new ProgrammingError("attachment is neither reference, datafile nor tutanotafile!")
 		}

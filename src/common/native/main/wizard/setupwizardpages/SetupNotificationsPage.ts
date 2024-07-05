@@ -6,8 +6,8 @@ import { lang } from "../../../../misc/LanguageViewModel.js"
 import { renderPermissionButton } from "../SetupWizard.js"
 import Stream from "mithril/stream"
 import { SetupPageLayout } from "./SetupPageLayout.js"
-import { locator } from "../../../../api/main/MainLocator.js"
 import { SystemPermissionHandler } from "../../SystemPermissionHandler.js"
+import type { NativePushServiceApp } from "../../NativePushServiceApp.js"
 
 export interface NotificationPermissionsData {
 	isNotificationPermissionGranted: boolean
@@ -43,6 +43,7 @@ export class SetupNotificationsPageAttrs implements WizardPageAttrs<Notification
 		permissionData: NotificationPermissionsData,
 		visiblityStream: Stream<boolean>,
 		private readonly systemPermissionHandler: SystemPermissionHandler,
+		private readonly pushService: NativePushServiceApp,
 	) {
 		this.isPageVisible = this.isPageNeeded(permissionData)
 		this.data = permissionData
@@ -71,7 +72,7 @@ export class SetupNotificationsPageAttrs implements WizardPageAttrs<Notification
 
 		// Register the push notifications if granted
 		if (isNotificationPermissionGranted) {
-			locator.pushService.register()
+			this.pushService.register()
 		}
 		m.redraw()
 	}

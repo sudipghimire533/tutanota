@@ -36,6 +36,8 @@ import { locator } from "../api/main/MainLocator"
 import { CredentialAuthenticationError } from "../api/common/error/CredentialAuthenticationError"
 import type { Params } from "mithril"
 import { LoginState } from "../login/LoginViewModel.js"
+import { CredentialsProvider } from "./credentials/CredentialsProvider.js"
+import { SecondFactorHandler } from "./2fa/SecondFactorHandler.js"
 
 /**
  * Shows warnings if the invoices are not paid or the registration is not approved yet.
@@ -262,13 +264,13 @@ export function getRegistrationDataIdFromParams(hashParams: Params): string | nu
 	return null
 }
 
-async function loadRedeemGiftCardWizard(urlHash: string): Promise<Dialog> {
+async function loadRedeemGiftCardWizard(urlHash: string, credentialsProvider: CredentialsProvider, secondFactorHandler: SecondFactorHandler): Promise<Dialog> {
 	const wizard = await import("../subscription/giftcards/RedeemGiftCardWizard")
-	return wizard.loadRedeemGiftCardWizard(urlHash)
+	return wizard.loadRedeemGiftCardWizard(urlHash, credentialsProvider, secondFactorHandler)
 }
 
-export async function showGiftCardDialog(urlHash: string) {
-	showProgressDialog("loading_msg", loadRedeemGiftCardWizard(urlHash))
+export async function showGiftCardDialog(urlHash: string, credentialsProvider: CredentialsProvider, secondFactorHandler: SecondFactorHandler) {
+	showProgressDialog("loading_msg", loadRedeemGiftCardWizard(urlHash, credentialsProvider, secondFactorHandler))
 		.then((dialog) => dialog.show())
 		.catch((e) => {
 			if (e instanceof NotAuthorizedError || e instanceof NotFoundError) {
@@ -280,9 +282,14 @@ export async function showGiftCardDialog(urlHash: string) {
 		.catch(ofClass(UserError, showUserError))
 }
 
-export async function showRecoverDialog(mailAddress: string, resetAction: ResetAction) {
+export async function showRecoverDialog(
+	secondFactorHandler: SecondFactorHandler,
+	credentialsProvider: CredentialsProvider,
+	mailAddress: string,
+	resetAction: ResetAction,
+) {
 	const dialog = await import("../login/recover/RecoverLoginDialog")
-	dialog.show(mailAddress, resetAction)
+	dialog.show(secondFactorHandler, credentialsProvider, mailAddress, resetAction)
 }
 
 export type ExternalUserKeyDeriver = {

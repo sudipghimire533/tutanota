@@ -15,8 +15,8 @@ import { lang } from "../../common/misc/LanguageViewModel.js"
 import { isSameId } from "../../common/api/common/utils/EntityUtils.js"
 import { Keys } from "../../common/api/common/TutanotaConstants.js"
 import { isMailAddress } from "../../common/misc/FormatValidator.js"
-
-import { cleanMailAddress } from "../../common/calendarFunctionality/commonCalendarUtils.js"
+import { mailLocator } from "../mailLocator.js"
+import { cleanMailAddress } from "../../common/mailFunctionality/CommonMailUtils.js"
 
 export async function showContactListEditor(
 	contactListGroupRoot: ContactListGroupRoot | null,
@@ -25,7 +25,7 @@ export async function showContactListEditor(
 	addressesOnList?: Array<string>,
 ): Promise<void> {
 	let showNameInput = true
-	const recipientsSearch = await locator.recipientsSearchModel()
+	const recipientsSearch = await mailLocator.recipientsSearchModel()
 
 	if (contactListGroupRoot) {
 		showNameInput = false

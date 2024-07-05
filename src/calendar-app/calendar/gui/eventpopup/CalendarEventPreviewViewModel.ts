@@ -9,6 +9,7 @@ import { CalendarAttendeeStatus } from "../../../../common/api/common/TutanotaCo
 import m from "mithril"
 import { clone, Thunk } from "@tutao/tutanota-utils"
 import { CalendarEventUidIndexEntry } from "../../../../common/api/worker/facades/lazy/CalendarFacade.js"
+import { RecipientsSearchModel } from "../../../../common/misc/RecipientsSearchModel.js"
 
 /**
  * makes decisions about which operations are available from the popup and knows how to implement them depending on the event's type.
@@ -53,6 +54,7 @@ export class CalendarEventPreviewViewModel {
 		ownAttendee: CalendarEventAttendee | null,
 		private readonly lazyIndexEntry: () => Promise<CalendarEventUidIndexEntry | null>,
 		private readonly eventModelFactory: (mode: CalendarOperation) => Promise<CalendarEventModel | null>,
+		private readonly recipientsSearchModel: () => Promise<RecipientsSearchModel>,
 		private readonly uiUpdateCallback: () => void = m.redraw,
 	) {
 		this._ownAttendee = clone(ownAttendee)
@@ -161,11 +163,16 @@ export class CalendarEventPreviewViewModel {
 			return
 		}
 		try {
-			return await showExistingCalendarEventEditDialog(model, {
-				uid: this.calendarEvent.uid,
-				sequence: this.calendarEvent.sequence,
-				recurrenceId: this.calendarEvent.startTime,
-			})
+			return await showExistingCalendarEventEditDialog(
+				model,
+				{
+					uid: this.calendarEvent.uid,
+					sequence: this.calendarEvent.sequence,
+					recurrenceId: this.calendarEvent.startTime,
+				},
+				null,
+				this.recipientsSearchModel,
+			)
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				console.log("occurrence not found when clicking on the event")
@@ -183,11 +190,16 @@ export class CalendarEventPreviewViewModel {
 			return
 		}
 		try {
-			return await showExistingCalendarEventEditDialog(model, {
-				uid: this.calendarEvent.uid,
-				sequence: this.calendarEvent.sequence,
-				recurrenceId: null,
-			})
+			return await showExistingCalendarEventEditDialog(
+				model,
+				{
+					uid: this.calendarEvent.uid,
+					sequence: this.calendarEvent.sequence,
+					recurrenceId: null,
+				},
+				null,
+				this.recipientsSearchModel,
+			)
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				console.log("calendar event not found when clicking on the event")

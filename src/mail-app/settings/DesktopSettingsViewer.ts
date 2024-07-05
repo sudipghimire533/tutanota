@@ -22,6 +22,8 @@ import { locator } from "../../common/api/main/MainLocator"
 import { IconButton, IconButtonAttrs } from "../../common/gui/base/IconButton.js"
 import { ButtonSize } from "../../common/gui/base/ButtonSize.js"
 import { MoreInfoLink } from "../../common/misc/news/MoreInfoLink.js"
+import { SettingsFacade } from "../../common/native/common/generatedipc/SettingsFacade.js"
+import type { NativeFileApp } from "../../common/native/common/FileApp.js"
 
 assertMainOrNode()
 
@@ -41,10 +43,10 @@ export class DesktopSettingsViewer implements UpdatableSettingsViewer {
 	private showAutoUpdateOption: boolean
 	private readonly updateAvailable: Stream<boolean>
 	private readonly mailExportMode: Stream<MailExportMode>
-	private isPathDialogOpen: boolean = false
 	private offlineStorageValue: Stream<boolean>
+	private isPathDialogOpen: boolean = false
 
-	constructor() {
+	constructor(private readonly desktopSettingsFacade: SettingsFacade, private readonly fileApp: NativeFileApp) {
 		this.isDefaultMailtoHandler = stream<boolean | null>(false)
 		this.runAsTrayApp = stream<boolean | null>(true)
 		this.runOnStartup = stream<boolean | null>(false)
@@ -190,7 +192,7 @@ export class DesktopSettingsViewer implements UpdatableSettingsViewer {
 		}
 		const updateHelpLabelAttrs: UpdateHelpLabelAttrs = {
 			updateAvailable: this.updateAvailable,
-			manualUpdate: () => locator.desktopSettingsFacade.manualUpdate(),
+			manualUpdate: () => this.desktopSettingsFacade.manualUpdate(),
 		}
 		const setAutoUpdateAttrs: DropDownSelectorAttrs<boolean> = {
 			label: "autoUpdate_label",
@@ -259,27 +261,27 @@ export class DesktopSettingsViewer implements UpdatableSettingsViewer {
 	}
 
 	private toggleAutoLaunchInNative(enable: boolean): Promise<void> {
-		return enable ? locator.desktopSettingsFacade.enableAutoLaunch() : locator.desktopSettingsFacade.disableAutoLaunch()
+		return enable ? this.desktopSettingsFacade.enableAutoLaunch() : this.desktopSettingsFacade.disableAutoLaunch()
 	}
 
 	private updateDefaultMailtoHandler(shouldBeDefaultMailtoHandler: boolean): Promise<void> {
-		return shouldBeDefaultMailtoHandler ? locator.desktopSettingsFacade.registerMailto() : locator.desktopSettingsFacade.unregisterMailto()
+		return shouldBeDefaultMailtoHandler ? this.desktopSettingsFacade.registerMailto() : this.desktopSettingsFacade.unregisterMailto()
 	}
 
 	private updateDesktopIntegration(shouldIntegrate: boolean): Promise<void> {
-		return shouldIntegrate ? locator.desktopSettingsFacade.integrateDesktop() : locator.desktopSettingsFacade.unIntegrateDesktop()
+		return shouldIntegrate ? this.desktopSettingsFacade.integrateDesktop() : this.desktopSettingsFacade.unIntegrateDesktop()
 	}
 
 	private async requestDesktopConfig() {
 		this.defaultDownloadPath = stream(lang.get("alwaysAsk_action"))
 		const [integrationInfo, defaultDownloadPath, runAsTrayApp, showAutoUpdateOption, enableAutoUpdate, mailExportMode, spellcheckLabel] = await Promise.all(
 			[
-				locator.desktopSettingsFacade.getIntegrationInfo(),
-				locator.desktopSettingsFacade.getStringConfigValue(DesktopConfigKey.defaultDownloadPath),
-				locator.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.runAsTrayApp),
-				locator.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.showAutoUpdateOption),
-				locator.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.enableAutoUpdate),
-				locator.desktopSettingsFacade.getStringConfigValue(DesktopConfigKey.mailExportMode),
+				this.desktopSettingsFacade.getIntegrationInfo(),
+				this.desktopSettingsFacade.getStringConfigValue(DesktopConfigKey.defaultDownloadPath),
+				this.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.runAsTrayApp),
+				this.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.showAutoUpdateOption),
+				this.desktopSettingsFacade.getBooleanConfigValue(DesktopConfigKey.enableAutoUpdate),
+				this.desktopSettingsFacade.getStringConfigValue(DesktopConfigKey.mailExportMode),
 				getCurrentSpellcheckLanguageLabel(),
 			],
 		)
@@ -309,12 +311,12 @@ export class DesktopSettingsViewer implements UpdatableSettingsViewer {
 	}
 
 	async setBooleanValue(setting: DesktopConfigKey, value: boolean): Promise<void> {
-		await locator.desktopSettingsFacade.setBooleanConfigValue(setting, value)
+		await this.desktopSettingsFacade.setBooleanConfigValue(setting, value)
 		m.redraw()
 	}
 
 	async setStringValue(setting: DesktopConfigKey, value: string | null): Promise<void> {
-		await locator.desktopSettingsFacade.setStringConfigValue(setting, value)
+		await this.desktopSettingsFacade.setStringConfigValue(setting, value)
 		m.redraw()
 	}
 
@@ -325,7 +327,7 @@ export class DesktopSettingsViewer implements UpdatableSettingsViewer {
 		if (v === DownloadLocationStrategy.ALWAYS_ASK) {
 			savePath = null
 		} else {
-			savePath = await locator.fileApp.openFolderChooser()
+			savePath = await this.fileApp.openFolderChooser()
 		}
 
 		this.defaultDownloadPath(savePath ?? lang.get("alwaysAsk_action"))

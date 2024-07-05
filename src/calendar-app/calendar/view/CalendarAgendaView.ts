@@ -24,7 +24,8 @@ import { PageView } from "../../../common/gui/base/PageView.js"
 import { getIfLargeScroll } from "../../../common/gui/base/GuiUtils.js"
 import { isKeyPressed } from "../../../common/misc/KeyManager.js"
 import { Keys } from "../../../common/api/common/TutanotaConstants.js"
-import { getTimeZone, isAllDayEvent } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { isAllDayEvent } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 export type CalendarAgendaViewAttrs = {
 	selectedDate: Date

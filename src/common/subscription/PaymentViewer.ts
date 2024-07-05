@@ -39,6 +39,7 @@ import { client } from "../misc/ClientDetector.js"
 import { DeviceType } from "../misc/ClientConstants.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../api/common/utils/EntityUpdateUtils.js"
 import { LoginButton } from "../gui/base/buttons/LoginButton.js"
+import { FileController } from "../file/FileController.js"
 
 assertMainOrNode()
 
@@ -54,7 +55,7 @@ export class PaymentViewer implements UpdatableSettingsViewer {
 	private _invoiceInfo: InvoiceInfo | null = null
 	view: UpdatableSettingsViewer["view"]
 
-	constructor() {
+	constructor(private readonly fileController: FileController) {
 		this._invoiceAddressField = new HtmlEditor()
 			.setMinHeight(140)
 			.showBorders()
@@ -265,7 +266,7 @@ export class PaymentViewer implements UpdatableSettingsViewer {
 	private async doInvoiceDownload(posting: CustomerAccountPosting): Promise<unknown> {
 		if (client.compressionStreamSupported()) {
 			return showProgressDialog("pleaseWait_msg", locator.customerFacade.generatePdfInvoice(neverNull(posting.invoiceNumber))).then((pdfInvoice) =>
-				locator.fileController.saveDataFile(pdfInvoice),
+				this.fileController.saveDataFile(pdfInvoice),
 			)
 		} else {
 			if (client.device == DeviceType.ANDROID) {

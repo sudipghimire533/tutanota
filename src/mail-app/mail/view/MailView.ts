@@ -58,6 +58,7 @@ import { EnterMultiselectIconButton } from "../../../common/gui/EnterMultiselect
 import { MailFilterButton } from "./MailFilterButton.js"
 import { listSelectionKeyboardShortcuts } from "../../../common/gui/base/ListUtils.js"
 import { canDoDragAndDropExport, getFolderName, getMailboxName, isSpamOrTrashFolder } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { mailLocator } from "../../mailLocator.js"
 
 assertMainOrNode()
 
@@ -633,7 +634,7 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 
 		if (isApp()) {
 			let userGroupInfo = locator.logins.getUserController().userGroupInfo
-			locator.pushService.closePushNotification(
+			mailLocator.pushService.closePushNotification(
 				userGroupInfo.mailAddressAliases.map((alias) => alias.mailAddress).concat(userGroupInfo.mailAddress || []),
 			)
 		}

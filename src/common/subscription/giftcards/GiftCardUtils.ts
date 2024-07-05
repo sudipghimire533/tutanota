@@ -20,6 +20,7 @@ import { Keys } from "../../api/common/TutanotaConstants"
 import { formatPrice } from "../PriceUtils"
 import { CURRENT_GIFT_CARD_TERMS_VERSION, renderTermsAndConditionsButton, TermsSection } from "../TermsAndConditions"
 import { IconButton } from "../../gui/base/IconButton.js"
+import { MobileSystemFacade } from "../../native/common/generatedipc/MobileSystemFacade.js"
 
 export const enum GiftCardStatus {
 	Deactivated = "0",
@@ -65,7 +66,7 @@ export async function generateGiftCardLink(giftCard: GiftCard): Promise<string> 
 	return giftCardUrl.href
 }
 
-export function showGiftCardToShare(giftCard: GiftCard) {
+export function showGiftCardToShare(giftCard: GiftCard, systemFacade?: MobileSystemFacade) {
 	generateGiftCardLink(giftCard).then((link) => {
 		let dialog: Dialog
 		let infoMessage = "emptyString_msg"
@@ -121,10 +122,10 @@ export function showGiftCardToShare(giftCard: GiftCard) {
 								title: "shareViaEmail_action",
 								icon: BootIcons.Mail,
 							}),
-							isAndroidApp()
+							isAndroidApp() && systemFacade
 								? m(IconButton, {
 										click: () => {
-											locator.systemFacade.shareText(
+											systemFacade.shareText(
 												lang.get("nativeShareGiftCard_msg", {
 													"{link}": link,
 												}),

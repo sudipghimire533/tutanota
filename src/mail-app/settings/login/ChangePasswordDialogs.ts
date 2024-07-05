@@ -8,6 +8,7 @@ import { NotAuthenticatedError } from "../../../common/api/common/error/RestErro
 import { PasswordForm, PasswordModel } from "../PasswordForm.js"
 import { assertNotNull, ofClass } from "@tutao/tutanota-utils"
 import { asKdfType, DEFAULT_KDF_TYPE } from "../../../common/api/common/TutanotaConstants.js"
+import { CredentialsProvider } from "../../../common/misc/credentials/CredentialsProvider.js"
 
 /**
  *The admin does not have to enter the old password in addition to the new password (twice). The password strength is not enforced.
@@ -36,8 +37,7 @@ export async function showChangeUserPasswordAsAdminDialog(user: User) {
 	})
 }
 
-async function storeNewPassword(currentUser: User, encryptedPassword: string | null) {
-	const credentialsProvider = locator.credentialsProvider
+async function storeNewPassword(currentUser: User, encryptedPassword: string | null, credentialsProvider: CredentialsProvider) {
 	const storedCredentials = await credentialsProvider.getCredentialsInfoByUserId(currentUser._id)
 	if (storedCredentials != null) {
 		const password = assertNotNull(encryptedPassword, "encrypted password not provided")
@@ -48,7 +48,7 @@ async function storeNewPassword(currentUser: User, encryptedPassword: string | n
 /**
  * The user must enter the old password in addition to the new password (twice). The password strength is enforced.
  */
-export async function showChangeOwnPasswordDialog(allowCancel: boolean = true) {
+export async function showChangeOwnPasswordDialog(allowCancel: boolean = true, credentialsProvider: CredentialsProvider) {
 	const model = new PasswordModel(locator.usageTestController, locator.logins, { checkOldPassword: true, enforceStrength: true })
 
 	const changeOwnPasswordOkAction = async (dialog: Dialog) => {
@@ -75,7 +75,7 @@ export async function showChangeOwnPasswordDialog(allowCancel: boolean = true) {
 					Dialog.message("pwChangeValid_msg")
 					dialog.close()
 					// do not wait for it or catch the errors, we do not want to confuse the user with the password change if anything goes wrong
-					storeNewPassword(currentUser, encryptedPassword)
+					storeNewPassword(currentUser, encryptedPassword, credentialsProvider)
 				})
 				.catch(
 					ofClass(NotAuthenticatedError, (e) => {

@@ -21,13 +21,20 @@ import { appIdToLoginUrl } from "../../../../common/misc/2fa/SecondFactorUtils.j
 import { DomainConfigProvider } from "../../../../common/api/common/DomainConfigProvider.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../../../../common/api/common/utils/EntityUpdateUtils.js"
 import { MoreInfoLink } from "../../../../common/misc/news/MoreInfoLink.js"
+import { WebauthnClient } from "../../../../common/misc/2fa/webauthn/WebauthnClient.js"
+import { MobileSystemFacade } from "../../../../common/native/common/generatedipc/MobileSystemFacade.js"
 
 assertMainOrNode()
 
 export class SecondFactorsEditForm {
 	_2FALineAttrs: TableLineAttrs[]
 
-	constructor(private readonly user: LazyLoaded<User>, private readonly domainConfigProvider: DomainConfigProvider) {
+	constructor(
+		private readonly user: LazyLoaded<User>,
+		private readonly domainConfigProvider: DomainConfigProvider,
+		private readonly webAuthn: WebauthnClient,
+		private readonly systemFacade: MobileSystemFacade,
+	) {
 		this._2FALineAttrs = []
 
 		this._updateSecondFactors()
@@ -108,7 +115,7 @@ export class SecondFactorsEditForm {
 
 	_showAddSecondFactorDialog() {
 		const mailAddress = assertNotNull(locator.logins.getUserController().userGroupInfo.mailAddress)
-		SecondFactorEditDialog.loadAndShow(locator.entityClient, this.user, mailAddress)
+		SecondFactorEditDialog.loadAndShow(locator.entityClient, this.user, mailAddress, this.webAuthn, this.systemFacade)
 	}
 
 	entityEventReceived(update: EntityUpdateData): Promise<void> {

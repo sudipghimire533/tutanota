@@ -663,7 +663,7 @@ export class ContactView extends BaseTopLevelView implements TopLevelView<Contac
 						icon: Icons.ContactImport,
 						click: async () => {
 							const { showGroupSharingDialog } = await import("../../../common/sharing/view/GroupSharingDialog.js")
-							showGroupSharingDialog(contactListInfo.groupInfo, true)
+							showGroupSharingDialog(contactListInfo.groupInfo, true, mailLocator.recipientsSearchModel)
 						},
 					},
 					contactListInfo.isOwner

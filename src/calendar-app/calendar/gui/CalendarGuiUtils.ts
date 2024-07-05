@@ -74,12 +74,13 @@ import { createAsyncDropdown } from "../../../common/gui/base/Dropdown.js"
 import {
 	alarmIntervalToLuxonDurationLikeObject,
 	CalendarEventTimes,
-	cleanMailAddress,
-	getAllDayDateForTimezone,
-	getTimeZone,
+	getEventEnd,
+	getEventStart,
 	isAllDayEvent,
-} from "../../../common/calendarFunctionality/commonCalendarUtils.js"
-import { getEventEnd, getEventStart } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+} from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { getAllDayDateForTimezone } from "../../../common/calendarFunctionality/CommonDateUtils.js"
+import { cleanMailAddress } from "../../../common/mailFunctionality/CommonMailUtils.js"
 
 export function renderCalendarSwitchLeftButton(label: TranslationKey, click: () => unknown): Child {
 	return m(IconButton, {
@@ -851,6 +852,7 @@ export async function showDeletePopup(model: CalendarEventPreviewViewModel, ev: 
 		confirmDeleteClose(model, onClose)
 	}
 }
+
 async function confirmDeleteClose(model: CalendarEventPreviewViewModel, onClose?: () => unknown): Promise<void> {
 	if (!(await Dialog.confirm("deleteEventConfirmation_msg"))) return
 	await model.deleteAll()

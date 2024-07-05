@@ -23,8 +23,8 @@ import { UserError } from "../../../../common/api/main/UserError.js"
 import { CalendarOperation, EventType } from "./CalendarEventModel.js"
 import { ProgrammingError } from "../../../../common/api/common/error/ProgrammingError.js"
 import { CalendarNotificationSendModels } from "./CalendarNotificationModel.js"
-import { RecipientField } from "../../../../common/mailFunctionality/CommonMailUtils.js"
-import { cleanMailAddress, findRecipientWithAddress } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { cleanMailAddress, RecipientField } from "../../../../common/mailFunctionality/CommonMailUtils.js"
+import { findRecipientWithAddress } from "../../../../common/calendarFunctionality/CommonCalendarUtils.js"
 
 /** there is no point in returning recipients, the SendMailModel will re-resolve them anyway. */
 type AttendanceModelResult = {

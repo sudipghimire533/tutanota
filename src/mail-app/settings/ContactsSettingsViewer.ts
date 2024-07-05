@@ -11,13 +11,14 @@ import { TutanotaProperties, TutanotaPropertiesTypeRef } from "../../common/api/
 import { Button, ButtonType } from "../../common/gui/base/Button.js"
 import { Dialog } from "../../common/gui/base/Dialog.js"
 import { mailLocator } from "../mailLocator.js"
+import { MobileSystemFacade } from "../../common/native/common/generatedipc/MobileSystemFacade.js"
 
 assertMainOrNode()
 
 export class ContactsSettingsViewer implements UpdatableSettingsViewer {
 	private noAutomaticContacts: boolean = false
 
-	constructor() {
+	constructor(private readonly systemFacade: MobileSystemFacade) {
 		this.noAutomaticContacts = locator.logins.getUserController().props.noAutomaticContacts
 	}
 
@@ -136,7 +137,7 @@ export class ContactsSettingsViewer implements UpdatableSettingsViewer {
 
 	private async showContactsPermissionDialog() {
 		await Dialog.message("allowContactReadWrite_msg")
-		await locator.systemFacade.goToSettings()
+		await this.systemFacade.goToSettings()
 	}
 
 	private async importContactsFromDevice() {

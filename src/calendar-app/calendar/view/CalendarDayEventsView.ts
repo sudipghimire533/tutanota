@@ -20,7 +20,7 @@ import type { GroupColors } from "./CalendarView"
 import { styles } from "../../../common/gui/styles"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import { CalendarTimeIndicator } from "./CalendarTimeIndicator.js"
-import { getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
 
 export type Attrs = {
 	onEventClicked: CalendarEventBubbleClickHandler

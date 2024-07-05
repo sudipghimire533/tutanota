@@ -19,11 +19,18 @@ import { createDropdown, DropdownButtonAttrs } from "../../gui/base/Dropdown.js"
 import { IconButton, IconButtonAttrs } from "../../gui/base/IconButton.js"
 import { ButtonSize } from "../../gui/base/ButtonSize.js"
 import { PasswordField } from "../../misc/passwords/PasswordField.js"
+import { SecondFactorHandler } from "../../misc/2fa/SecondFactorHandler.js"
+import { CredentialsProvider } from "../../misc/credentials/CredentialsProvider.js"
 
 assertMainOrNode()
 export type ResetAction = "password" | "secondFactor"
 
-export function show(mailAddress?: string | null, resetAction?: ResetAction): Dialog {
+export function show(
+	secondFactorHandler: SecondFactorHandler,
+	credentialsProvider: CredentialsProvider,
+	mailAddress?: string | null,
+	resetAction?: ResetAction,
+): Dialog {
 	const selectedAction: Stream<ResetAction | null> = stream(resetAction ?? null)
 	const passwordModel = new PasswordModel(locator.usageTestController, locator.logins, { checkOldPassword: false, enforceStrength: true })
 	const passwordValueStream = stream("")
@@ -113,18 +120,18 @@ export function show(mailAddress?: string | null, resetAction?: ResetAction): Di
 					)
 						.then(async () => {
 							recoverDialog.close()
-							await deleteCredentialsByMailAddress(cleanMailAddress)
+							await deleteCredentialsByMailAddress(cleanMailAddress, credentialsProvider)
 							windowFacade.reload({})
 						})
 						.catch((e) => handleError(e))
-						.finally(() => locator.secondFactorHandler.closeWaitingForSecondFactorDialog())
+						.finally(() => secondFactorHandler.closeWaitingForSecondFactorDialog())
 				}
 			} else if (selectedAction() === "secondFactor") {
 				const passwordValue = passwordValueStream()
 				showProgressDialog("pleaseWait_msg", locator.loginFacade.resetSecondFactors(cleanMailAddress, passwordValue, cleanRecoverCodeValue))
 					.then(async () => {
 						recoverDialog.close()
-						await deleteCredentialsByMailAddress(cleanMailAddress)
+						await deleteCredentialsByMailAddress(cleanMailAddress, credentialsProvider)
 						windowFacade.reload({})
 					})
 					.catch((e) => handleError(e))
@@ -138,12 +145,12 @@ export function show(mailAddress?: string | null, resetAction?: ResetAction): Di
 	return recoverDialog
 }
 
-async function deleteCredentialsByMailAddress(cleanMailAddress: string) {
-	const allCredentials = await locator.credentialsProvider.getInternalCredentialsInfos()
+async function deleteCredentialsByMailAddress(cleanMailAddress: string, credentialsProvider: CredentialsProvider) {
+	const allCredentials = await credentialsProvider.getInternalCredentialsInfos()
 	const credentials = allCredentials.find((c) => c.login === cleanMailAddress)
 
 	if (credentials) {
-		await locator.credentialsProvider.deleteByUserId(credentials.userId)
+		await credentialsProvider.deleteByUserId(credentials.userId)
 	}
 }
 

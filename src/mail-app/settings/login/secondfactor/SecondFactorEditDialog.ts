@@ -23,11 +23,13 @@ import { ButtonSize } from "../../../../common/gui/base/ButtonSize.js"
 import { NameValidationStatus, SecondFactorEditModel, SecondFactorTypeToNameTextId, VerificationStatus } from "./SecondFactorEditModel.js"
 import { UserError } from "../../../../common/api/main/UserError.js"
 import { LoginButton } from "../../../../common/gui/base/buttons/LoginButton.js"
+import { WebauthnClient } from "../../../../common/misc/2fa/webauthn/WebauthnClient.js"
+import { MobileSystemFacade } from "../../../../common/native/common/generatedipc/MobileSystemFacade.js"
 
 export class SecondFactorEditDialog {
 	private readonly dialog: Dialog
 
-	constructor(private readonly model: SecondFactorEditModel) {
+	constructor(private readonly model: SecondFactorEditModel, private readonly systemFacade: MobileSystemFacade) {
 		this.dialog = Dialog.createActionDialog({
 			title: lang.get("add_action"),
 			allowOkWithReturn: true,
@@ -59,8 +61,17 @@ export class SecondFactorEditDialog {
 		RecoverCodeDialog.showRecoverCodeDialogAfterPasswordVerificationAndInfoDialog(user)
 	}
 
-	static async loadAndShow(entityClient: EntityClient, lazyUser: LazyLoaded<User>, mailAddress: string): Promise<void> {
-		const dialog: SecondFactorEditDialog = await showProgressDialog("pleaseWait_msg", this.loadWebauthnClient(entityClient, lazyUser, mailAddress))
+	static async loadAndShow(
+		entityClient: EntityClient,
+		lazyUser: LazyLoaded<User>,
+		mailAddress: string,
+		webAuthn: WebauthnClient,
+		systemFacade: MobileSystemFacade,
+	): Promise<void> {
+		const dialog: SecondFactorEditDialog = await showProgressDialog(
+			"pleaseWait_msg",
+			this.loadWebauthnClient(entityClient, lazyUser, mailAddress, webAuthn, systemFacade),
+		)
 		dialog.dialog.show()
 	}
 
@@ -159,7 +170,7 @@ export class SecondFactorEditDialog {
 
 	private async openOtpLink() {
 		const { url } = await this.model.otpInfo.getAsync()
-		const successful = await locator.systemFacade.openLink(url)
+		const successful = await this.systemFacade.openLink(url)
 
 		if (!successful) {
 			// noinspection ES6MissingAwait
@@ -167,15 +178,21 @@ export class SecondFactorEditDialog {
 		}
 	}
 
-	private static async loadWebauthnClient(entityClient: EntityClient, lazyUser: LazyLoaded<User>, mailAddress: string): Promise<SecondFactorEditDialog> {
+	private static async loadWebauthnClient(
+		entityClient: EntityClient,
+		lazyUser: LazyLoaded<User>,
+		mailAddress: string,
+		webAuthn: WebauthnClient,
+		systemFacade: MobileSystemFacade,
+	): Promise<SecondFactorEditDialog> {
 		const totpKeys = await locator.loginFacade.generateTotpSecret()
 		const user = await lazyUser.getAsync()
-		const webauthnSupported = await locator.webAuthn.isSupported()
+		const webauthnSupported = await webAuthn.isSupported()
 		const model = new SecondFactorEditModel(
 			entityClient,
 			user,
 			mailAddress,
-			locator.webAuthn,
+			webAuthn,
 			totpKeys,
 			webauthnSupported,
 			lang,
@@ -184,7 +201,7 @@ export class SecondFactorEditDialog {
 			locator.domainConfigProvider().getCurrentDomainConfig(),
 			m.redraw,
 		)
-		return new SecondFactorEditDialog(model)
+		return new SecondFactorEditDialog(model, systemFacade)
 	}
 
 	private statusIcon(): Children {

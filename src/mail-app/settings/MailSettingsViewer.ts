@@ -47,6 +47,7 @@ import { formatStorageSize } from "../../common/misc/Formatter.js"
 import { CustomerInfo } from "../../common/api/entities/sys/TypeRefs.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../../common/api/common/utils/EntityUpdateUtils.js"
 import { getDefaultSenderFromUser, getFolderName, getMailAddressDisplayText } from "../../common/mailFunctionality/CommonMailUtils.js"
+import { SearchModel } from "../search/model/SearchModel.js"
 
 assertMainOrNode()
 
@@ -71,7 +72,7 @@ export class MailSettingsViewer implements UpdatableSettingsViewer {
 
 	private offlineStorageSettings = new OfflineStorageSettingsModel(locator.logins.getUserController(), deviceConfig)
 
-	constructor() {
+	constructor(private readonly search: SearchModel) {
 		this._defaultSender = getDefaultSenderFromUser(locator.logins.getUserController())
 		this._signature = stream(getSignatureType(locator.logins.getUserController().props).name)
 		this._reportMovedMails = getReportMovedMailsType(null) // loaded later
@@ -79,7 +80,7 @@ export class MailSettingsViewer implements UpdatableSettingsViewer {
 		this._defaultUnconfidential = locator.logins.getUserController().props.defaultUnconfidential
 		this._sendPlaintext = locator.logins.getUserController().props.sendPlaintextOnly
 		this._noAutomaticContacts = locator.logins.getUserController().props.noAutomaticContacts
-		this._enableMailIndexing = locator.search.indexState().mailIndexEnabled
+		this._enableMailIndexing = this.search.indexState().mailIndexEnabled
 		this._inboxRulesExpanded = stream<boolean>(false)
 		this.mailAddressTableExpanded = false
 		this._inboxRulesTableLines = stream<Array<TableLineAttrs>>([])
@@ -312,7 +313,7 @@ export class MailSettingsViewer implements UpdatableSettingsViewer {
 				{
 					role: "group",
 					oncreate: () => {
-						this._indexStateWatch = locator.search.indexState.map((newValue) => {
+						this._indexStateWatch = this.search.indexState.map((newValue) => {
 							this._enableMailIndexing = newValue.mailIndexEnabled
 
 							m.redraw()

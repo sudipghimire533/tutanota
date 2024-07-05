@@ -519,8 +519,12 @@ class RedeemGiftCardPage implements WizardPageN<RedeemGiftCardModel> {
 	}
 }
 
-export async function loadRedeemGiftCardWizard(hashFromUrl: string): Promise<Dialog> {
-	const model = await loadModel(hashFromUrl)
+export async function loadRedeemGiftCardWizard(
+	hashFromUrl: string,
+	credentialsProvider: CredentialsProvider,
+	secondFactorHandler: SecondFactorHandler,
+): Promise<Dialog> {
+	const model = await loadModel(hashFromUrl, credentialsProvider, secondFactorHandler)
 
 	const wizardPages = [
 		wizardPageWrapper(GiftCardWelcomePage, {
@@ -556,11 +560,15 @@ export async function loadRedeemGiftCardWizard(hashFromUrl: string): Promise<Dia
 	).dialog
 }
 
-async function loadModel(hashFromUrl: string): Promise<RedeemGiftCardModel> {
+async function loadModel(
+	hashFromUrl: string,
+	credentialsProvider: CredentialsProvider,
+	secondFactorHandler: SecondFactorHandler,
+): Promise<RedeemGiftCardModel> {
 	const { id, key } = await getTokenFromUrl(hashFromUrl)
 	const giftCardInfo = await locator.giftCardFacade.getGiftCardInfo(id, key)
 
-	const storedCredentials = await locator.credentialsProvider.getInternalCredentialsInfos()
+	const storedCredentials = await credentialsProvider.getInternalCredentialsInfos()
 	const pricesDataProvider = await PriceAndConfigProvider.getInitializedInstance(null, locator.serviceExecutor, null)
 
 	return new RedeemGiftCardModel(
@@ -571,8 +579,8 @@ async function loadModel(hashFromUrl: string): Promise<RedeemGiftCardModel> {
 			storedCredentials,
 		},
 		locator.giftCardFacade,
-		locator.credentialsProvider,
-		locator.secondFactorHandler,
+		credentialsProvider,
+		secondFactorHandler,
 		locator.logins,
 		locator.entityClient,
 	)

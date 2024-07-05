@@ -1,6 +1,6 @@
 import type { CalendarEvent, CalendarGroupRoot } from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { CalendarEventTypeRef, createFile } from "../../../common/api/entities/tutanota/TypeRefs.js"
-import { CALENDAR_MIME_TYPE, showFileChooser } from "../../../common/file/FileController"
+import { CALENDAR_MIME_TYPE, FileController, showFileChooser } from "../../../common/file/FileController"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog"
 import { ParserError } from "../../../common/misc/parsing/ParserCombinator"
 import { Dialog } from "../../../common/gui/base/Dialog"
@@ -17,7 +17,8 @@ import { CalendarEventValidity, checkEventValidity } from "../date/CalendarUtils
 import { ImportError } from "../../../common/api/common/error/ImportError"
 import { TranslationKeyType } from "../../../common/misc/TranslationKey"
 import { AlarmInfoTemplate } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
-import { assignEventId, generateEventElementId, getTimeZone } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { assignEventId, generateEventElementId } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone } from "../../../common/calendarFunctionality/CommonTimeUtils.js"
 
 export const enum EventImportRejectionReason {
 	Pre1970,
@@ -190,7 +191,14 @@ function shouldBeSkipped(event: CalendarEvent, instanceIdentifierToEventMap: Map
 }
 
 /** export all events from a calendar, using the alarmInfos the current user has access to and ignoring the other ones that may be set on the event. */
-export async function exportCalendar(calendarName: string, groupRoot: CalendarGroupRoot, userAlarmInfos: Id, now: Date, zone: string): Promise<void> {
+export async function exportCalendar(
+	calendarName: string,
+	groupRoot: CalendarGroupRoot,
+	userAlarmInfos: Id,
+	now: Date,
+	zone: string,
+	fileController: FileController,
+): Promise<void> {
 	return await showProgressDialog(
 		"pleaseWait_msg",
 		(async () => {
@@ -201,7 +209,7 @@ export async function exportCalendar(calendarName: string, groupRoot: CalendarGr
 				const alarms = await locator.entityClient.loadMultiple(UserAlarmInfoTypeRef, userAlarmInfos, thisUserAlarms.map(elementIdPart))
 				return { event, alarms }
 			})
-			return await exportCalendarEvents(calendarName, eventsWithAlarms, now, zone)
+			return await exportCalendarEvents(calendarName, eventsWithAlarms, now, zone, fileController)
 		})(),
 	)
 }
@@ -214,6 +222,7 @@ function exportCalendarEvents(
 	}>,
 	now: Date,
 	zone: string,
+	fileController: FileController,
 ) {
 	const stringValue = serializeCalendar(env.versionNumber, events, now, zone)
 	const data = stringToUtf8Uint8Array(stringValue)
@@ -226,7 +235,7 @@ function exportCalendarEvents(
 		cid: null,
 		blobs: [],
 	})
-	return locator.fileController.saveDataFile(convertToDataFile(tmpFile, data))
+	return fileController.saveDataFile(convertToDataFile(tmpFile, data))
 }
 
 function loadAllEvents(groupRoot: CalendarGroupRoot): Promise<Array<CalendarEvent>> {

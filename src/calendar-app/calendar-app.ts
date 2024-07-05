@@ -29,6 +29,14 @@ import { CalendarViewModel } from "./calendar/view/CalendarViewModel.js"
 import { LoginController } from "../common/api/main/LoginController.js"
 import { SearchViewModel } from "../mail-app/search/view/SearchViewModel.js"
 import { calendarLocator } from "./calendarLocator.js"
+import { FileController } from "../common/file/FileController.js"
+import { CalendarEventModel, CalendarOperation } from "./calendar/gui/eventeditor-model/CalendarEventModel.js"
+import type { CalendarEvent, Mail, MailboxProperties } from "../common/api/entities/tutanota/TypeRefs.js"
+import { MailboxDetail } from "../common/mailFunctionality/MailModel.js"
+import { CalendarInfo, CalendarModel } from "../common/calendarFunctionality/CalendarModel.js"
+import { CalendarEventPreviewViewModel } from "./calendar/gui/eventpopup/CalendarEventPreviewViewModel.js"
+import { RecipientsSearchModel } from "../common/misc/RecipientsSearchModel.js"
+import { mailLocator } from "../mail-app/mailLocator.js"
 
 assertMainOrNodeBoot()
 bootFinished()
@@ -106,14 +114,14 @@ import("../mail-app/translations/en.js")
 			// }
 		}
 
-		locator.logins.addPostLoginAction(() => locator.postLoginActions())
+		locator.logins.addPostLoginAction(() => calendarLocator.postLoginActions())
 
 		if (isOfflineStorageAvailable()) {
 			const { CachePostLoginAction } = await import("../common/offline/CachePostLoginAction.js")
 			locator.logins.addPostLoginAction(
 				async () =>
 					new CachePostLoginAction(
-						await locator.calendarModel(),
+						await calendarLocator.calendarModel(),
 						locator.entityClient,
 						locator.progressTracker,
 						locator.cacheStorage,
@@ -128,11 +136,11 @@ import("../mail-app/translations/en.js")
 			login: makeViewResolver<LoginViewAttrs, LoginView, { makeViewModel: () => LoginViewModel }>(
 				{
 					prepareRoute: async () => {
-						const migrator = await locator.credentialFormatMigrator()
+						const migrator = await calendarLocator.credentialFormatMigrator()
 						await migrator.migrate()
 
 						const { LoginView } = await import("../common/login/LoginView.js")
-						const makeViewModel = await locator.loginViewModelFactory()
+						const makeViewModel = await calendarLocator.loginViewModelFactory()
 						makeViewModel().setCredentialRemovalHandler(await calendarLocator.credentialsRemovalHandler())
 						return {
 							component: LoginView,
@@ -155,8 +163,13 @@ import("../mail-app/translations/en.js")
 							component: TerminationView,
 							cache: {
 								makeViewModel: () =>
-									new TerminationViewModel(locator.logins, locator.secondFactorHandler, locator.serviceExecutor, locator.entityClient),
-								header: await locator.appHeaderAttrs(),
+									new TerminationViewModel(
+										locator.logins,
+										calendarLocator.secondFactorHandler,
+										locator.serviceExecutor,
+										locator.entityClient,
+									),
+								header: await calendarLocator.appHeaderAttrs(),
 							},
 						}
 					},
@@ -169,13 +182,28 @@ import("../mail-app/translations/en.js")
 				{
 					prepareRoute: async () => {
 						const { SettingsView } = await import("../mail-app/settings/SettingsView.js")
-						const drawerAttrsFactory = await locator.drawerAttrsFactory()
+						const drawerAttrsFactory = await calendarLocator.drawerAttrsFactory()
 						return {
 							component: SettingsView,
-							cache: { drawerAttrsFactory, header: await locator.appHeaderAttrs() },
+							cache: { drawerAttrsFactory, header: await calendarLocator.appHeaderAttrs() },
 						}
 					},
-					prepareAttrs: (cache) => ({ drawerAttrs: cache.drawerAttrsFactory(), header: cache.header, logins: locator.logins }),
+					prepareAttrs: (cache) => ({
+						drawerAttrs: cache.drawerAttrsFactory(),
+						header: cache.header,
+						logins: locator.logins,
+						credentialsProvider: calendarLocator.credentialsProvider,
+						systemFacade: calendarLocator.systemFacade,
+						webAuthn: calendarLocator.webAuthn,
+						native: calendarLocator.native,
+						fileController: calendarLocator.fileController,
+						pushService: calendarLocator.pushService,
+						search: calendarLocator.search,
+						showSetupWizard: calendarLocator.showSetupWizard,
+						desktopSettingsFacade: calendarLocator.desktopSettingsFacade,
+						fileApp: calendarLocator.fileApp,
+						recipientsSearchModel: calendarLocator.recipientsSearchModel,
+					}),
 				},
 				locator.logins,
 			),
@@ -186,47 +214,106 @@ import("../mail-app/translations/en.js")
 					drawerAttrsFactory: () => DrawerMenuAttrs
 					header: AppHeaderAttrs
 					searchViewModelFactory: () => SearchViewModel
+					recipientsSearchModel: () => Promise<RecipientsSearchModel>
+					calendarEventPreviewModel: (
+						selectedEvent: CalendarEvent,
+						calendars: ReadonlyMap<string, CalendarInfo>,
+					) => Promise<CalendarEventPreviewViewModel>
+					calendarEventModel: (
+						editMode: CalendarOperation,
+						event: Partial<CalendarEvent>,
+						mailboxDetail: MailboxDetail,
+						mailboxProperties: MailboxProperties,
+						responseTo: Mail | null,
+					) => Promise<CalendarEventModel | null>
 				}
 			>(
 				{
 					prepareRoute: async () => {
 						const { SearchView } = await import("../mail-app/search/view/SearchView.js")
-						const drawerAttrsFactory = await locator.drawerAttrsFactory()
+						const drawerAttrsFactory = await calendarLocator.drawerAttrsFactory()
 						return {
 							component: SearchView,
 							cache: {
 								drawerAttrsFactory,
-								header: await locator.appHeaderAttrs(),
-								searchViewModelFactory: await locator.searchViewModelFactory(),
+								header: await calendarLocator.appHeaderAttrs(),
+								searchViewModelFactory: await calendarLocator.searchViewModelFactory(),
+								recipientsSearchModel: calendarLocator.recipientsSearchModel,
+								calendarEventPreviewModel: calendarLocator.calendarEventPreviewModel,
+								calendarEventModel: calendarLocator.calendarEventModel,
 							},
 						}
 					},
-					prepareAttrs: (cache) => ({ drawerAttrs: cache.drawerAttrsFactory(), header: cache.header, makeViewModel: cache.searchViewModelFactory }),
+					prepareAttrs: (cache) => ({
+						drawerAttrs: cache.drawerAttrsFactory(),
+						header: cache.header,
+						makeViewModel: cache.searchViewModelFactory,
+						recipientsSearchModel: cache.recipientsSearchModel,
+						calendarEventPreviewModel: cache.calendarEventPreviewModel,
+						calendarEventModel: cache.calendarEventModel,
+					}),
 				},
 				locator.logins,
 			),
 			calendar: makeViewResolver<
 				CalendarViewAttrs,
 				CalendarView,
-				{ drawerAttrsFactory: () => DrawerMenuAttrs; header: AppHeaderAttrs; calendarViewModel: CalendarViewModel }
+				{
+					drawerAttrsFactory: () => DrawerMenuAttrs
+					header: AppHeaderAttrs
+					calendarViewModel: CalendarViewModel
+					fileController: FileController
+					recipientsSearchModel: () => Promise<RecipientsSearchModel>
+					calendarEventModel: (
+						editMode: CalendarOperation,
+						event: Partial<CalendarEvent>,
+						mailboxDetail: MailboxDetail,
+						mailboxProperties: MailboxProperties,
+						responseTo: Mail | null,
+					) => Promise<CalendarEventModel | null>
+					calendarModel: () => Promise<CalendarModel>
+					calendarEventPreviewModel: (
+						selectedEvent: CalendarEvent,
+						calendars: ReadonlyMap<string, CalendarInfo>,
+					) => Promise<CalendarEventPreviewViewModel>
+				}
 			>(
 				{
 					prepareRoute: async (cache) => {
 						const { CalendarView } = await import("./calendar/view/CalendarView.js")
-						const drawerAttrsFactory = await locator.drawerAttrsFactory()
+						const drawerAttrsFactory = await calendarLocator.drawerAttrsFactory()
 						return {
 							component: CalendarView,
 							cache: cache ?? {
 								drawerAttrsFactory,
-								header: await locator.appHeaderAttrs(),
-								calendarViewModel: await locator.calendarViewModel(),
+								header: await calendarLocator.appHeaderAttrs(),
+								calendarViewModel: await calendarLocator.calendarViewModel(),
+								fileController: calendarLocator.fileController,
+								recipientsSearchModel: calendarLocator.recipientsSearchModel,
+								calendarEventModel: calendarLocator.calendarEventModel,
+								calendarModel: calendarLocator.calendarModel,
+								calendarEventPreviewModel: calendarLocator.calendarEventPreviewModel,
 							},
 						}
 					},
-					prepareAttrs: ({ header, calendarViewModel, drawerAttrsFactory }) => ({
+					prepareAttrs: ({
+						drawerAttrsFactory,
+						header,
+						calendarViewModel,
+						fileController,
+						recipientsSearchModel,
+						calendarEventModel,
+						calendarModel,
+						calendarEventPreviewModel,
+					}) => ({
 						drawerAttrs: drawerAttrsFactory(),
 						header,
 						calendarViewModel,
+						fileController,
+						recipientsSearchModel,
+						calendarEventModel,
+						calendarModel,
+						calendarEventPreviewModel,
 					}),
 				},
 				locator.logins,
@@ -275,7 +362,7 @@ import("../mail-app/translations/en.js")
 			giftcard: {
 				async onmatch() {
 					const { showGiftCardDialog } = await import("../common/misc/LoginUtils.js")
-					showGiftCardDialog(location.hash)
+					showGiftCardDialog(location.hash, calendarLocator.credentialsProvider, calendarLocator.secondFactorHandler)
 					m.route.set("/login", {
 						noAutoLogin: true,
 						keepSession: true,
@@ -288,7 +375,7 @@ import("../mail-app/translations/en.js")
 					const { showRecoverDialog } = await import("../common/misc/LoginUtils.js")
 					const resetAction = args.resetAction === "password" || args.resetAction === "secondFactor" ? args.resetAction : "password"
 					const mailAddress = typeof args.mailAddress === "string" ? args.mailAddress : ""
-					showRecoverDialog(mailAddress, resetAction)
+					showRecoverDialog(mailLocator.secondFactorHandler, mailLocator.credentialsProvider, mailAddress, resetAction)
 					m.route.set("/login", {
 						noAutoLogin: true,
 					})
@@ -365,7 +452,7 @@ import("../mail-app/translations/en.js")
 		// We need to initialize native once we start the mithril routing, specifically for the case of mailto handling in android
 		// If native starts telling the web side to navigate too early, mithril won't be ready and the requests will be lost
 		if (isApp() || isDesktop()) {
-			await locator.native.init()
+			await calendarLocator.native.init()
 		}
 		// if (isDesktop()) {
 		// 	const { exposeNativeInterface } = await import("../common/api/common/ExposeNativeInterface.js")

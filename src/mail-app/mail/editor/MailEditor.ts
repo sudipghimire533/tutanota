@@ -292,7 +292,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 		const inlineAttachment = tutanotaFiles.find((attachment) => attachment.cid === cid)
 
 		if (inlineAttachment && isTutanotaFile(inlineAttachment)) {
-			locator.fileController.open(inlineAttachment).catch(ofClass(FileOpenError, () => Dialog.message("canNotOpenFileOnDevice_msg")))
+			mailLocator.fileController.open(inlineAttachment).catch(ofClass(FileOpenError, () => Dialog.message("canNotOpenFileOnDevice_msg")))
 		}
 	}
 
@@ -944,7 +944,7 @@ async function createMailEditorDialog(model: SendMailModel, blockExternalContent
 		() => dialog,
 		templatePopupModel,
 		createKnowledgebaseButtonAttrs,
-		await locator.recipientsSearchModel(),
+		await mailLocator.recipientsSearchModel(),
 		alwaysBlockExternalContent,
 	)
 	const shortcuts: Shortcut[] = [
@@ -1095,7 +1095,7 @@ export async function newMailtoUrlMailEditor(mailtoUrl: string, confidential: bo
 		const attach = mailTo.attach
 
 		if (isDesktop()) {
-			const files = await Promise.all(attach.map((uri) => locator.fileApp.readDataFile(uri)))
+			const files = await Promise.all(attach.map((uri) => mailLocator.fileApp.readDataFile(uri)))
 			dataFiles = files.filter(isNotNull)
 		}
 		// make sure the user is aware that (and which) files have been attached
@@ -1158,7 +1158,7 @@ export async function newMailEditorFromTemplate(
 }
 
 export function getSupportMailSignature(): Promise<string> {
-	return import("../../../calendar-app/calendar/date/CalendarUtils").then(({ getTimeZone }) => {
+	return import("../../../common/calendarFunctionality/CommonTimeUtils").then(({ getTimeZone }) => {
 		return (
 			LINE_BREAK +
 			LINE_BREAK +

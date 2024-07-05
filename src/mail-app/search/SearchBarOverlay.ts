@@ -22,7 +22,7 @@ import { companyTeamLabel } from "../../common/misc/ClientConstants.js"
 import { formatEventDuration } from "../../calendar-app/calendar/gui/CalendarGuiUtils.js"
 import { getSenderOrRecipientHeading } from "../../common/mailFunctionality/CommonMailUtils.js"
 import { isTutanotaTeamMail } from "../mail/MailUtils.js"
-import { getTimeZone } from "../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getTimeZone } from "../../common/calendarFunctionality/CommonTimeUtils.js"
 
 type SearchBarOverlayAttrs = {
 	state: SearchBarState

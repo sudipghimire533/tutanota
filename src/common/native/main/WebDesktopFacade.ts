@@ -6,8 +6,11 @@ import { NativeShortcut } from "../common/generatedipc/NativeShortcut.js"
 import { Shortcut } from "../../misc/KeyManager.js"
 import { Keys } from "../../api/common/TutanotaConstants.js"
 import { IMainLocator } from "../../api/main/MainLocator.js"
+import type { NativeInterfaceMain } from "./NativeInterfaceMain.js"
 
 export class WebDesktopFacade implements DesktopFacade {
+	constructor(private readonly native: NativeInterfaceMain) {}
+
 	print(): Promise<void> {
 		window.print()
 		return Promise.resolve()
@@ -86,8 +89,7 @@ export class WebDesktopFacade implements DesktopFacade {
 	}
 
 	async appUpdateDownloaded(): Promise<void> {
-		const locator = await WebDesktopFacade.getInitializedLocator()
-		locator.native.handleUpdateDownload()
+		this.native.handleUpdateDownload()
 	}
 
 	private static async getInitializedLocator(): Promise<IMainLocator> {

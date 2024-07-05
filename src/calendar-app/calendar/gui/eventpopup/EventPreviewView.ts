@@ -20,7 +20,9 @@ import { ExternalLink } from "../../../../common/gui/base/ExternalLink.js"
 
 import { createRepeatRuleFrequencyValues, formatEventDuration, iconForAttendeeStatus } from "../CalendarGuiUtils.js"
 import { hasError } from "../../../../common/api/common/utils/ErrorUtils.js"
-import { cleanMailAddress, findAttendeeInAddresses, getTimeZone, isAllDayEvent } from "../../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { findAttendeeInAddresses, isAllDayEvent } from "../../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { getTimeZone } from "../../../../common/calendarFunctionality/CommonTimeUtils.js"
+import { cleanMailAddress } from "../../../../common/mailFunctionality/CommonMailUtils.js"
 
 export type EventPreviewViewAttrs = {
 	event: Omit<CalendarEvent, "description">

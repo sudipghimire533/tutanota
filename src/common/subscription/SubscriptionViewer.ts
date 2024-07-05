@@ -65,6 +65,7 @@ import { IconButton, IconButtonAttrs } from "../gui/base/IconButton.js"
 import { ButtonSize } from "../gui/base/ButtonSize.js"
 import { getDisplayNameOfPlanType } from "./FeatureListProvider"
 import { EntityUpdateData, isUpdateForTypeRef } from "../api/common/utils/EntityUpdateUtils.js"
+import { MobileSystemFacade } from "../native/common/generatedipc/MobileSystemFacade.js"
 
 assertMainOrNode()
 const DAY = 1000 * 60 * 60 * 24
@@ -96,7 +97,7 @@ export class SubscriptionViewer implements UpdatableSettingsViewer {
 	private _giftCards: Map<Id, GiftCard>
 	private _giftCardsExpanded: Stream<boolean>
 
-	constructor(currentPlanType: PlanType) {
+	constructor(currentPlanType: PlanType, private readonly systemFacade: MobileSystemFacade) {
 		this.currentPlanType = currentPlanType
 		const isPremiumPredicate = () => locator.logins.getUserController().isPremiumAccount()
 
@@ -160,7 +161,7 @@ export class SubscriptionViewer implements UpdatableSettingsViewer {
 						infoMsg: "giftCardSection_label",
 						expanded: this._giftCardsExpanded,
 					},
-					renderGiftCardTable(Array.from(this._giftCards.values()), isPremiumPredicate),
+					renderGiftCardTable(Array.from(this._giftCards.values()), isPremiumPredicate, this.systemFacade),
 				),
 				LegacyPlans.includes(this.currentPlanType)
 					? [
@@ -602,7 +603,7 @@ function showChangeSubscriptionIntervalDialog(accountingInfo: AccountingInfo, pa
 	}
 }
 
-function renderGiftCardTable(giftCards: GiftCard[], isPremiumPredicate: () => boolean): Children {
+function renderGiftCardTable(giftCards: GiftCard[], isPremiumPredicate: () => boolean, systemFacade: MobileSystemFacade): Children {
 	const addButtonAttrs: IconButtonAttrs = {
 		title: "buyGiftCard_label",
 		click: createNotAvailableForFreeClickHandler(NewPaidPlans, () => showPurchaseGiftCardDialog(), isPremiumPredicate),
@@ -625,7 +626,7 @@ function renderGiftCardTable(giftCards: GiftCard[], isPremiumPredicate: () => bo
 					childAttrs: () => [
 						{
 							label: "view_label",
-							click: () => showGiftCardToShare(giftCard),
+							click: () => showGiftCardToShare(giftCard, systemFacade),
 						},
 						{
 							label: "edit_action",
@@ -647,7 +648,7 @@ function renderGiftCardTable(giftCards: GiftCard[], isPremiumPredicate: () => bo
 											.update(giftCard)
 											.then(() => dialog.close())
 											.catch(() => Dialog.message("giftCardUpdateError_msg"))
-										showGiftCardToShare(giftCard)
+										showGiftCardToShare(giftCard, systemFacade)
 									},
 									okActionTextId: "save_action",
 									type: DialogType.EditSmall,

@@ -34,6 +34,7 @@ import { Dialog } from "../../../common/gui/base/Dialog.js"
 import { MoreInfoLink } from "../../../common/misc/news/MoreInfoLink.js"
 import { AppLockMethod } from "../../../common/native/common/generatedipc/AppLockMethod.js"
 import { MobileSystemFacade } from "../../../common/native/common/generatedipc/MobileSystemFacade.js"
+import { WebauthnClient } from "../../../common/misc/2fa/webauthn/WebauthnClient.js"
 
 assertMainOrNode()
 
@@ -42,16 +43,20 @@ export class LoginSettingsViewer implements UpdatableSettingsViewer {
 	private readonly _stars = stream("***")
 	private readonly _closedSessionsExpanded = stream(false)
 	private _sessions: Session[] = []
-	private readonly _secondFactorsForm = new SecondFactorsEditForm(
-		new LazyLoaded(() => Promise.resolve(locator.logins.getUserController().user)),
-		locator.domainConfigProvider(),
-	)
+	private secondFactorsForm: SecondFactorsEditForm
 	private readonly _usageTestModel: UsageTestModel
 	private credentialEncryptionMode: CredentialEncryptionMode | null = null
 	private appLockMethod: AppLockMethod | null = null
 
-	constructor(private readonly credentialsProvider: CredentialsProvider, private readonly mobileSystemFacade: MobileSystemFacade | null) {
+	constructor(private readonly credentialsProvider: CredentialsProvider, private readonly mobileSystemFacade: MobileSystemFacade, webAuthn: WebauthnClient) {
 		this._usageTestModel = locator.usageTestModel
+
+		this.secondFactorsForm = new SecondFactorsEditForm(
+			new LazyLoaded(() => Promise.resolve(locator.logins.getUserController().user)),
+			locator.domainConfigProvider(),
+			webAuthn,
+			this.mobileSystemFacade,
+		)
 
 		this._updateSessions()
 		this.updateAppLockData()
@@ -75,7 +80,7 @@ export class LoginSettingsViewer implements UpdatableSettingsViewer {
 		}
 		const changePasswordButtonAttrs: IconButtonAttrs = {
 			title: "changePassword_label",
-			click: () => showChangeOwnPasswordDialog(),
+			click: () => showChangeOwnPasswordDialog(true, this.credentialsProvider),
 			icon: Icons.Edit,
 			size: ButtonSize.Compact,
 		}
@@ -156,7 +161,7 @@ export class LoginSettingsViewer implements UpdatableSettingsViewer {
 					m(TextField, passwordAttrs),
 					user.isGlobalAdmin() ? m(TextField, recoveryCodeFieldAttrs) : null,
 					this.renderAppLockField(),
-					m(this._secondFactorsForm),
+					m(this.secondFactorsForm),
 					m(".h4.mt-l", lang.get("activeSessions_label")),
 					this._renderActiveSessions(),
 					m(".small", lang.get("sessionsInfo_msg")),
@@ -319,7 +324,7 @@ export class LoginSettingsViewer implements UpdatableSettingsViewer {
 				m.redraw()
 			}
 
-			await this._secondFactorsForm.entityEventReceived(update)
+			await this.secondFactorsForm.entityEventReceived(update)
 		}
 	}
 

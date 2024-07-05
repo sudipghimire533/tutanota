@@ -14,11 +14,12 @@ import type { UpdatableSettingsViewer } from "./SettingsView"
 import { isDesktop } from "../../common/api/common/Env"
 import { locator } from "../../common/api/main/MainLocator"
 import { EntityUpdateData, isUpdateForTypeRef } from "../../common/api/common/utils/EntityUpdateUtils.js"
+import { SettingsFacade } from "../../common/native/common/generatedipc/SettingsFacade.js"
 
 export class AppearanceSettingsViewer implements UpdatableSettingsViewer {
 	private _customThemes: Array<ThemeId> | null = null
 
-	oncreate() {
+	constructor(private readonly desktopSettingsFacade: SettingsFacade) {
 		themeController.getCustomThemes().then((themes) => {
 			this._customThemes = themes
 			m.redraw()
@@ -55,7 +56,7 @@ export class AppearanceSettingsViewer implements UpdatableSettingsViewer {
 				await lang.setLanguage(newLanguage)
 
 				if (isDesktop()) {
-					await locator.desktopSettingsFacade.changeLanguage(newLanguage.code, newLanguage.languageTag)
+					await this.desktopSettingsFacade.changeLanguage(newLanguage.code, newLanguage.languageTag)
 				}
 
 				styles.updateStyle("main")

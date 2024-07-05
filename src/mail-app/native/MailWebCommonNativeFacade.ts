@@ -10,6 +10,7 @@ import { Dialog } from "../../common/gui/base/Dialog.js"
 import { FileReference } from "../../common/api/common/utils/FileUtils.js"
 import { AttachmentType, getAttachmentType } from "../../common/gui/AttachmentBubble.js"
 import { showRequestPasswordDialog } from "../../common/misc/passwords/PasswordRequestDialog.js"
+import { IMailLocator } from "../mailLocator.js"
 
 export class MailWebCommonNativeFacade implements CommonNativeFacade {
 	/**
@@ -29,7 +30,8 @@ export class MailWebCommonNativeFacade implements CommonNativeFacade {
 		subject: string,
 		mailToUrlString: string,
 	): Promise<void> {
-		const { fileApp, mailModel, logins } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { mailModel, logins } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { fileApp } = await MailWebCommonNativeFacade.getInitializedMailLocator()
 		const { newMailEditorFromTemplate, newMailtoUrlMailEditor } = await import("../mail/editor/MailEditor.js")
 		const signatureModule = await import("../mail/signature/Signature.js")
 		await logins.waitForPartialLogin()
@@ -95,8 +97,8 @@ export class MailWebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	async invalidateAlarms(): Promise<void> {
-		const locator = await MailWebCommonNativeFacade.getInitializedLocator()
-		await locator.pushService.reRegister()
+		const mailLocator = await MailWebCommonNativeFacade.getInitializedMailLocator()
+		await mailLocator.pushService.reRegister()
 	}
 
 	async openCalendar(userId: string): Promise<void> {
@@ -178,8 +180,14 @@ export class MailWebCommonNativeFacade implements CommonNativeFacade {
 		return locator
 	}
 
+	private static async getInitializedMailLocator(): Promise<IMailLocator> {
+		const { mailLocator } = await import("../mailLocator.js")
+		return mailLocator
+	}
+
 	private async parseContacts(fileList: FileReference[]) {
-		const { fileApp, logins } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { logins } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { fileApp } = await MailWebCommonNativeFacade.getInitializedMailLocator()
 
 		await logins.waitForPartialLogin()
 
@@ -204,10 +212,9 @@ export class MailWebCommonNativeFacade implements CommonNativeFacade {
 	 * @param filesUris List of files URI to be parsed
 	 */
 	async handleFileImport(filesUris: ReadonlyArray<string>): Promise<void> {
-		// FIXME: contactImporter is no longer in locator, may need to split CommonNativeFacade into
-		// mail and calendar
-		const { fileApp, contactModel } = await MailWebCommonNativeFacade.getInitializedLocator()
-		// FIXME: const importer = await contactImporter()
+		const { contactModel } = await MailWebCommonNativeFacade.getInitializedLocator()
+		const { fileApp, contactImporter } = await MailWebCommonNativeFacade.getInitializedMailLocator()
+		const importer = await contactImporter()
 
 		// For now, we just handle .vcf files, so we don't need to care about the file type
 		const files = await fileApp.getFilesMetaData(filesUris)
@@ -215,6 +222,6 @@ export class MailWebCommonNativeFacade implements CommonNativeFacade {
 		const vCardData = contacts.join("\n")
 		const contactListId = assertNotNull(await contactModel.getContactListId())
 
-		// FIXME: await importer.importContactsFromFile(vCardData, contactListId)
+		await importer.importContactsFromFile(vCardData, contactListId)
 	}
 }

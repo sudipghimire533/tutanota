@@ -14,9 +14,11 @@ import { Icons } from "../../../gui/base/icons/Icons.js"
 import { ifAllowedTutaLinks } from "../../../gui/base/GuiUtils.js"
 import { UserController } from "../../../api/main/UserController.js"
 import { MoreInfoLink } from "../MoreInfoLink.js"
+import { MobileSystemFacade } from "../../../native/common/generatedipc/MobileSystemFacade.js"
 
 export type ReferralLinkAttrs = {
 	referralLink: string
+	systemFacade: MobileSystemFacade
 }
 
 /**
@@ -27,21 +29,23 @@ export class ReferralLinkViewer implements Component<ReferralLinkAttrs> {
 		return m(".scroll", [
 			m(".h4", lang.get("referralSettings_label")),
 			m("", lang.get("referralLinkLong_msg")),
-			m(TextField, this.getReferralLinkTextFieldAttrs(vnode.attrs.referralLink)),
+			m(TextField, this.getReferralLinkTextFieldAttrs(vnode.attrs)),
 		])
 	}
 
-	getReferralLinkTextFieldAttrs(referralLink: string): TextFieldAttrs {
+	getReferralLinkTextFieldAttrs(attrs: ReferralLinkAttrs): TextFieldAttrs {
+		const { referralLink, systemFacade } = attrs
 		return {
 			isReadOnly: true,
 			label: "referralLink_label",
 			value: referralLink,
-			injectionsRight: () => this.renderButtons(referralLink),
+			injectionsRight: () => this.renderButtons(attrs),
 			helpLabel: () => ifAllowedTutaLinks(locator.logins, InfoLink.ReferralLink, (link) => [m(MoreInfoLink, { link: link })]),
 		}
 	}
 
-	private renderButtons(referralLink: string): Children {
+	private renderButtons(attrs: ReferralLinkAttrs): Children {
+		const { referralLink, systemFacade } = attrs
 		if (referralLink === "") {
 			return [] // referral link not available yet
 		}
@@ -55,7 +59,7 @@ export class ReferralLinkViewer implements Component<ReferralLinkAttrs> {
 			}),
 			m(IconButton, {
 				title: "share_action",
-				click: () => this.shareAction(referralLink),
+				click: () => this.shareAction(referralLink, systemFacade),
 				icon: BootIcons.Share,
 				size: ButtonSize.Compact,
 			}),
@@ -73,11 +77,11 @@ export class ReferralLinkViewer implements Component<ReferralLinkAttrs> {
 		})
 	}
 
-	private async shareAction(referralLink: string): Promise<void> {
+	private async shareAction(referralLink: string, systemFacade: MobileSystemFacade): Promise<void> {
 		if (isApp()) {
 			// open native share dialog on mobile
 			const shareMessage = this.getReferralLinkMessage(referralLink)
-			return locator.systemFacade.shareText(shareMessage, lang.get("referralSettings_label")).then()
+			return systemFacade.shareText(shareMessage, lang.get("referralSettings_label")).then()
 		} else {
 			// otherwise share via MailEditor
 			import("../../../../mail-app/mail/editor/MailEditor.js").then((mailEditorModule) => mailEditorModule.writeInviteMail(referralLink))

@@ -21,6 +21,7 @@ import { ColumnWidth, Table } from "../../../common/gui/base/Table.js"
 import { ExpanderButton, ExpanderPanel } from "../../../common/gui/base/Expander.js"
 import stream from "mithril/stream"
 import { exportMails } from "../export/Exporter.js"
+import { mailLocator } from "../../mailLocator.js"
 
 /*
 	note that mailViewerViewModel has a mailModel, so you do not need to pass both if you pass a mailViewerViewModel
@@ -158,7 +159,7 @@ export class MailViewerActions implements Component<MailViewerToolbarAttrs> {
 							attrs.mails,
 							locator.mailFacade,
 							locator.entityClient,
-							locator.fileController,
+							mailLocator.fileController,
 							locator.cryptoFacade,
 							operation.id,
 							ac.signal,

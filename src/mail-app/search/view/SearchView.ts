@@ -8,7 +8,15 @@ import { assertMainOrNode } from "../../../common/api/common/Env"
 import { keyManager, Shortcut } from "../../../common/misc/KeyManager"
 import { NavButton, NavButtonColor } from "../../../common/gui/base/NavButton.js"
 import { BootIcons } from "../../../common/gui/base/icons/BootIcons"
-import { CalendarEvent, CalendarEventTypeRef, Contact, ContactTypeRef, Mail, MailTypeRef } from "../../../common/api/entities/tutanota/TypeRefs.js"
+import {
+	CalendarEvent,
+	CalendarEventTypeRef,
+	Contact,
+	ContactTypeRef,
+	Mail,
+	type MailboxProperties,
+	MailTypeRef,
+} from "../../../common/api/entities/tutanota/TypeRefs.js"
 import { SearchListView, SearchListViewAttrs } from "./SearchListView"
 import { px, size } from "../../../common/gui/size"
 import { getFreeSearchStartDate, SEARCH_MAIL_FIELDS, SearchCategoryTypes } from "../model/SearchUtils"
@@ -97,12 +105,14 @@ import {
 	handleSendUpdatesClick,
 } from "../../../calendar-app/calendar/view/EventDetailsView.js"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog.js"
-import { CalendarOperation } from "../../../calendar-app/calendar/gui/eventeditor-model/CalendarEventModel.js"
+import { CalendarEventModel, CalendarOperation } from "../../../calendar-app/calendar/gui/eventeditor-model/CalendarEventModel.js"
 import { showNewCalendarEventEditDialog } from "../../../calendar-app/calendar/gui/eventeditor-view/CalendarEventEditDialog.js"
 import { getSharedGroupName } from "../../../common/sharing/GroupUtils.js"
 import { YEAR_IN_MILLIS } from "@tutao/tutanota-utils/dist/DateUtils.js"
 import { getIndentedFolderNameForDropdown } from "../../../common/mailFunctionality/CommonMailUtils.js"
-import { getEventWithDefaultTimes } from "../../../common/calendarFunctionality/commonCalendarUtils.js"
+import { getEventWithDefaultTimes } from "../../../common/calendarFunctionality/CommonCalendarUtils.js"
+import { RecipientsSearchModel } from "../../../common/misc/RecipientsSearchModel.js"
+import { MailboxDetail } from "../../../common/mailFunctionality/MailModel.js"
 
 assertMainOrNode()
 
@@ -110,6 +120,15 @@ export interface SearchViewAttrs extends TopLevelAttrs {
 	drawerAttrs: DrawerMenuAttrs
 	header: AppHeaderAttrs
 	makeViewModel: () => SearchViewModel
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>
+	calendarEventPreviewModel: (selectedEvent: CalendarEvent, calendars: ReadonlyMap<string, CalendarInfo>) => Promise<CalendarEventPreviewViewModel>
+	calendarEventModel: (
+		editMode: CalendarOperation,
+		event: Partial<CalendarEvent>,
+		mailboxDetail: MailboxDetail,
+		mailboxProperties: MailboxProperties,
+		responseTo: Mail | null,
+	) => Promise<CalendarEventModel | null>
 }
 
 export class SearchView extends BaseTopLevelView implements TopLevelView<SearchViewAttrs> {
@@ -118,11 +137,23 @@ export class SearchView extends BaseTopLevelView implements TopLevelView<SearchV
 	private readonly folderColumn: ViewColumn
 	private readonly viewSlider: ViewSlider
 	private readonly searchViewModel: SearchViewModel
+	private readonly recipientsSearchModel: () => Promise<RecipientsSearchModel>
+	private readonly calendarEventPreviewModel: (
+		selectedEvent: CalendarEvent,
+		calendars: ReadonlyMap<string, CalendarInfo>,
+	) => Promise<CalendarEventPreviewViewModel>
+	private readonly calendarEventModel: (
+		editMode: CalendarOperation,
+		event: Partial<CalendarEvent>,
+		mailboxDetail: MailboxDetail,
+		mailboxProperties: MailboxProperties,
+		responseTo: Mail | null,
+	) => Promise<CalendarEventModel | null>
 
 	private getSanitizedPreviewData: (event: CalendarEvent) => LazyLoaded<CalendarEventPreviewViewModel> = memoized((event: CalendarEvent) =>
 		new LazyLoaded(async () => {
 			const calendars = await this.searchViewModel.getLazyCalendarInfos().getAsync()
-			const eventPreviewModel = await locator.calendarEventPreviewModel(event, calendars)
+			const eventPreviewModel = await this.calendarEventPreviewModel(event, calendars)
 			eventPreviewModel.sanitizeDescription().then(() => m.redraw())
 			return eventPreviewModel
 		}).load(),
@@ -131,6 +162,9 @@ export class SearchView extends BaseTopLevelView implements TopLevelView<SearchV
 	constructor(vnode: Vnode<SearchViewAttrs>) {
 		super()
 		this.searchViewModel = vnode.attrs.makeViewModel()
+		this.recipientsSearchModel = vnode.attrs.recipientsSearchModel
+		this.calendarEventPreviewModel = vnode.attrs.calendarEventPreviewModel
+		this.calendarEventModel = vnode.attrs.calendarEventModel
 
 		this.folderColumn = new ViewColumn(
 			{
@@ -995,10 +1029,10 @@ export class SearchView extends BaseTopLevelView implements TopLevelView<SearchV
 
 		const mailboxDetails = await locator.mailModel.getUserMailboxDetails()
 		const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-		const model = await locator.calendarEventModel(CalendarOperation.Create, getEventWithDefaultTimes(dateToUse), mailboxDetails, mailboxProperties, null)
+		const model = await this.calendarEventModel(CalendarOperation.Create, getEventWithDefaultTimes(dateToUse), mailboxDetails, mailboxProperties, null)
 
 		if (model) {
-			await showNewCalendarEventEditDialog(model)
+			await showNewCalendarEventEditDialog(model, this.recipientsSearchModel)
 		}
 	}
 

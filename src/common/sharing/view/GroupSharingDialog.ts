@@ -25,10 +25,15 @@ import { getTextsForGroupType } from "../GroupGuiUtils"
 import { ResolvableRecipient, ResolveMode } from "../../api/main/RecipientsModel"
 import { MailRecipientsTextField } from "../../gui/MailRecipientsTextField.js"
 import { showPlanUpgradeRequiredDialog } from "../../misc/SubscriptionDialogs.js"
-import { getMailAddressDisplayText } from "../../mailFunctionality/CommonMailUtils.js"
-import { cleanMailAddress, findRecipientWithAddress } from "../../calendarFunctionality/commonCalendarUtils.js"
+import { cleanMailAddress, getMailAddressDisplayText } from "../../mailFunctionality/CommonMailUtils.js"
+import { findRecipientWithAddress } from "../../calendarFunctionality/CommonCalendarUtils.js"
+import { RecipientsSearchModel } from "../../misc/RecipientsSearchModel.js"
 
-export async function showGroupSharingDialog(groupInfo: GroupInfo, allowGroupNameOverride: boolean) {
+export async function showGroupSharingDialog(
+	groupInfo: GroupInfo,
+	allowGroupNameOverride: boolean,
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>,
+) {
 	const groupType = downcast(assertNotNull(groupInfo.groupType))
 	assert(isShareableGroupType(groupInfo.groupType as GroupType), `Group type "${groupType}" must be shareable`)
 	const texts = getTextsForGroupType(groupType)
@@ -56,6 +61,7 @@ export async function showGroupSharingDialog(groupInfo: GroupInfo, allowGroupNam
 					allowGroupNameOverride,
 					texts,
 					dialog,
+					recipientsSearchModel,
 				}),
 			okAction: null,
 			cancelAction: () => model.dispose(),
@@ -69,11 +75,12 @@ type GroupSharingDialogAttrs = {
 	allowGroupNameOverride: boolean
 	texts: GroupSharingTexts
 	dialog: Dialog
+	recipientsSearchModel: () => Promise<RecipientsSearchModel>
 }
 
 class GroupSharingDialogContent implements Component<GroupSharingDialogAttrs> {
 	view(vnode: Vnode<GroupSharingDialogAttrs>): Children {
-		const { model, allowGroupNameOverride, texts, dialog } = vnode.attrs
+		const { model, allowGroupNameOverride, texts, dialog, recipientsSearchModel } = vnode.attrs
 		const groupName = getSharedGroupName(model.info, model.logins.getUserController(), allowGroupNameOverride)
 		return m(".flex.col.pt-s", [
 			m(Table, {
@@ -84,7 +91,7 @@ class GroupSharingDialogContent implements Component<GroupSharingDialogAttrs> {
 				addButtonAttrs: hasCapabilityOnGroup(locator.logins.getUserController().user, model.group, ShareCapability.Invite)
 					? {
 							title: "addParticipant_action",
-							click: () => showAddParticipantDialog(model, texts),
+							click: () => showAddParticipantDialog(model, texts, recipientsSearchModel),
 							icon: Icons.Add,
 					  }
 					: null,
@@ -151,14 +158,14 @@ class GroupSharingDialogContent implements Component<GroupSharingDialogAttrs> {
 	}
 }
 
-async function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingTexts) {
+async function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingTexts, recipientsSearchModel: () => Promise<RecipientsSearchModel>) {
 	const recipientsText = stream("")
 	const recipients = [] as Array<ResolvableRecipient>
 	const capability = stream<ShareCapability>(ShareCapability.Read)
 	const realGroupName = getSharedGroupName(model.info, locator.logins.getUserController(), false)
 	const customGroupName = getSharedGroupName(model.info, locator.logins.getUserController(), true)
 
-	const search = await locator.recipientsSearchModel()
+	const search = await recipientsSearchModel()
 	const recipientsModel = await locator.recipientsModel()
 
 	let dialog = Dialog.showActionDialog({

@@ -54,7 +54,7 @@ import { EntityClient, loadMultipleFromLists } from "../../../common/api/common/
 import { SearchRouter } from "./SearchRouter.js"
 import { MailOpenedListener } from "../../mail/view/MailViewModel.js"
 import { containsEventOfType, EntityUpdateData, getEventOfType, isUpdateForTypeRef } from "../../../common/api/common/utils/EntityUpdateUtils.js"
-import { CalendarInfo } from "../../../common/calendarFunctionality/CalendarModel.js"
+import { CalendarInfo, CalendarModel } from "../../../common/calendarFunctionality/CalendarModel.js"
 import { locator } from "../../../common/api/main/MainLocator.js"
 import m from "mithril"
 import { CalendarFacade } from "../../../common/api/worker/facades/lazy/CalendarFacade.js"
@@ -111,7 +111,7 @@ export class SearchViewModel {
 	private listStateSubscription: Stream<unknown> | null = null
 	loadingAllForSearchResult: SearchResult | null = null
 	private readonly lazyCalendarInfos: LazyLoaded<ReadonlyMap<string, CalendarInfo>> = new LazyLoaded(async () => {
-		const calendarModel = await locator.calendarModel()
+		const calendarModel = await this.calendarModel()
 		const calendarInfos = await calendarModel.getCalendarInfos()
 		m.redraw()
 		return calendarInfos
@@ -133,6 +133,7 @@ export class SearchViewModel {
 		private readonly conversationViewModelFactory: ConversationViewModelFactory | null,
 		private readonly updateUi: () => unknown,
 		private readonly selectionBehavior: ListAutoSelectBehavior,
+		private readonly calendarModel: () => Promise<CalendarModel>,
 	) {
 		this.currentQuery = this.search.result()?.query ?? ""
 		this.listModel = this.createList()

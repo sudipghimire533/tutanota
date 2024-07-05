@@ -31,6 +31,7 @@ import { VirtualRow } from "../../../common/gui/base/ListUtils.js"
 import { isKeyPressed } from "../../../common/misc/KeyManager.js"
 import { isOfTypeOrSubfolderOf } from "../MailUtils.js"
 import { assertSystemFolderOfType, canDoDragAndDropExport } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { mailLocator } from "../../mailLocator.js"
 
 assertMainOrNode()
 
@@ -182,9 +183,9 @@ export class MailListView implements Component<MailListViewAttrs> {
 		const [didComplete, fileNames] = await Promise.race([filePathsPromise.then((filePaths) => [true, filePaths]), mouseupPromise.then(() => [false, []])])
 
 		if (didComplete) {
-			await locator.fileApp.startNativeDrag(fileNames as string[])
+			await mailLocator.fileApp.startNativeDrag(fileNames as string[])
 		} else {
-			await locator.desktopSystemFacade.focusApplicationWindow()
+			await mailLocator.desktopSystemFacade.focusApplicationWindow()
 			Dialog.message("unsuccessfulDrop_msg")
 		}
 
@@ -247,7 +248,7 @@ export class MailListView implements Component<MailListViewAttrs> {
 
 					case "complete": {
 						// We have downloaded it, but we need to check if it still exists
-						const exists = await locator.fileApp.checkFileExistsInExportDir(existing.fileName)
+						const exists = await mailLocator.fileApp.checkFileExistsInExportDir(existing.fileName)
 
 						if (exists) {
 							handleDownloaded(existing.fileName, Promise.resolve(mail))
@@ -274,14 +275,14 @@ export class MailListView implements Component<MailListViewAttrs> {
 						mail,
 						locator.mailFacade,
 						locator.entityClient,
-						locator.fileController,
+						mailLocator.fileController,
 						htmlSanitizer,
 						locator.cryptoFacade,
 					)
 					progressMonitor.workDone(1)
 					const file = await generateMailFile(bundle, name, exportMode)
 					progressMonitor.workDone(1)
-					await locator.fileApp.saveToExportDir(file)
+					await mailLocator.fileApp.saveToExportDir(file)
 					progressMonitor.workDone(1)
 				})
 				this.exportedMails.set(key, {

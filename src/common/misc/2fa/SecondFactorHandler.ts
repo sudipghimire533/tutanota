@@ -15,6 +15,7 @@ import { SecondFactorAuthDialog } from "./SecondFactorAuthDialog"
 import type { LoginFacade } from "../../api/worker/facades/LoginFacade"
 import { DomainConfigProvider } from "../../api/common/DomainConfigProvider.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../../api/common/utils/EntityUpdateUtils.js"
+import { CredentialsProvider } from "../credentials/CredentialsProvider.js"
 
 assertMainOrNode()
 
@@ -36,6 +37,7 @@ export class SecondFactorHandler {
 		private readonly webauthnClient: WebauthnClient,
 		private readonly loginFacade: LoginFacade,
 		private readonly domainConfigProvider: DomainConfigProvider,
+		private readonly credentialsProvider: CredentialsProvider,
 	) {}
 
 	setupAcceptOtherClientLoginListener() {
@@ -188,6 +190,8 @@ export class SecondFactorHandler {
 			() => {
 				this.waitingForSecondFactorDialog = null
 			},
+			this,
+			this.credentialsProvider,
 		)
 	}
 }

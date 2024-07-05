@@ -31,6 +31,9 @@ import { lang } from "../../common/misc/LanguageViewModel.js"
 import { keyManager } from "../../common/misc/KeyManager.js"
 import { EntityUpdateData, isUpdateFor, isUpdateForTypeRef } from "../../common/api/common/utils/EntityUpdateUtils.js"
 import { ListAutoSelectBehavior } from "../../common/misc/DeviceConfig.js"
+import { WebauthnClient } from "../../common/misc/2fa/webauthn/WebauthnClient.js"
+import { MobileSystemFacade } from "../../common/native/common/generatedipc/MobileSystemFacade.js"
+import { CredentialsProvider } from "../../common/misc/credentials/CredentialsProvider.js"
 
 assertMainOrNode()
 
@@ -64,6 +67,9 @@ export class UserListView implements UpdatableSettingsViewer {
 		private readonly canImportUsers: () => boolean,
 		private readonly onImportUsers: () => unknown,
 		private readonly onExportUsers: () => unknown,
+		private readonly webAuthn: WebauthnClient,
+		private readonly systemFacade: MobileSystemFacade,
+		private readonly credentialsProvider: CredentialsProvider,
 	) {
 		// doing it after "onSelectionChanged" is initialized
 		this.listModel = this.makeListModel()
@@ -258,7 +264,7 @@ export class UserListView implements UpdatableSettingsViewer {
 				detailsViewer = null
 			} else {
 				const item = newSelection.values().next().value
-				detailsViewer = new UserViewer(item, this.isAdmin(item))
+				detailsViewer = new UserViewer(item, this.isAdmin(item), this.webAuthn, this.systemFacade, this.credentialsProvider)
 			}
 			this.updateDetailsViewer(detailsViewer)
 			m.redraw()

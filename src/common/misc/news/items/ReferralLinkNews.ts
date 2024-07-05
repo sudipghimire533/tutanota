@@ -8,6 +8,7 @@ import { DateProvider } from "../../../api/common/DateProvider.js"
 import { generatedIdToTimestamp } from "../../../api/common/utils/EntityUtils.js"
 import { getDayShifted, neverNull } from "@tutao/tutanota-utils"
 import { UserController } from "../../../api/main/UserController.js"
+import { MobileSystemFacade } from "../../../native/common/generatedipc/MobileSystemFacade.js"
 
 const REFERRAL_NEWS_DISPLAY_THRESHOLD_DAYS = 7
 
@@ -19,7 +20,12 @@ const REFERRAL_NEWS_DISPLAY_THRESHOLD_DAYS = 7
 export class ReferralLinkNews implements NewsListItem {
 	private referralLink: string = ""
 
-	constructor(private readonly newsModel: NewsModel, private readonly dateProvider: DateProvider, private readonly userController: UserController) {}
+	constructor(
+		private readonly newsModel: NewsModel,
+		private readonly dateProvider: DateProvider,
+		private readonly userController: UserController,
+		private readonly systemFacade: MobileSystemFacade,
+	) {}
 
 	async isShown(): Promise<boolean> {
 		// Do not show this for business customers yet (not allowed to create referral links)
@@ -48,7 +54,7 @@ export class ReferralLinkNews implements NewsListItem {
 		]
 
 		return m(".full-width", [
-			m(ReferralLinkViewer, { referralLink: this.referralLink }),
+			m(ReferralLinkViewer, { referralLink: this.referralLink, systemFacade: this.systemFacade }),
 			m(
 				".flex-end.flex-no-grow-no-shrink-auto.flex-wrap",
 				buttonAttrs.map((a) => m(Button, a)),
