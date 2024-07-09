@@ -22,6 +22,7 @@ import { createErrorReportData, createErrorReportFile, createReportErrorIn } fro
 import { ErrorReportClientType } from "./ClientConstants.js"
 import { client } from "./ClientDetector.js"
 import { BubbleButton } from "../gui/base/buttons/BubbleButton.js"
+import { CommonSystemFacade } from "../native/common/generatedipc/CommonSystemFacade.js"
 
 type FeedbackContent = {
 	message: string
@@ -35,10 +36,10 @@ type FeedbackContent = {
  *
  * If report is pressed then it shows a report dialog with message field and an overview of the sent data.
  */
-export async function showErrorNotification(e: ErrorInfo): Promise<{ ignored: boolean }> {
+export async function showErrorNotification(e: ErrorInfo, commonSystemFacade: CommonSystemFacade): Promise<{ ignored: boolean }> {
 	const loggedIn = locator.logins.isUserLoggedIn()
 
-	const logs = await getLogAttachments()
+	const logs = await getLogAttachments(commonSystemFacade)
 
 	const { decision, ignore } = await showErrorOverlay()
 	if (decision === "cancel") {
@@ -386,7 +387,7 @@ export function clientInfoString(
 	}
 }
 
-export async function getLogAttachments(timestamp?: Date): Promise<Array<DataFile>> {
+export async function getLogAttachments(commonSystemFacade: CommonSystemFacade, timestamp?: Date): Promise<Array<DataFile>> {
 	const logs: Array<DataFile> = []
 	const global = downcast<Window>(window)
 
@@ -400,7 +401,7 @@ export async function getLogAttachments(timestamp?: Date): Promise<Array<DataFil
 	}
 
 	if (isDesktop() || isApp()) {
-		const nativeLog = await locator.commonSystemFacade.getLog()
+		const nativeLog = await commonSystemFacade.getLog()
 		const nativeLogFile = createLogFile(nativeLog, isDesktop() ? "desktop" : "device", timestamp?.getTime())
 		logs.push(nativeLogFile)
 	}

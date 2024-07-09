@@ -33,6 +33,11 @@ import { OfflineDbClosedError } from "../api/common/error/OfflineDbClosedError.j
 import { UserTypeRef } from "../api/entities/sys/TypeRefs.js"
 import { isOfflineError } from "../api/common/utils/ErrorUtils.js"
 import { showRequestPasswordDialog } from "./passwords/PasswordRequestDialog.js"
+import { CommonSystemFacade } from "../native/common/generatedipc/CommonSystemFacade.js"
+import { InterWindowEventFacadeSendDispatcher } from "../native/common/generatedipc/InterWindowEventFacadeSendDispatcher.js"
+import { SearchModel } from "../../mail-app/search/model/SearchModel.js"
+import { CredentialsProvider } from "./credentials/CredentialsProvider.js"
+import { SecondFactorHandler } from "./2fa/SecondFactorHandler.js"
 
 assertMainOrNode()
 
@@ -47,8 +52,15 @@ let shownQuotaError = false
 let showingImportError = false
 const ignoredMessages = ["webkitExitFullScreen", "googletag", "avast_submit"]
 
-export async function handleUncaughtErrorImpl(e: Error) {
-	const { logins, interWindowEventSender, worker, search } = locator
+export async function handleUncaughtErrorImpl(
+	e: Error,
+	commonSystemFacade: CommonSystemFacade,
+	interWindowEventSender: InterWindowEventFacadeSendDispatcher,
+	search: SearchModel,
+	secondFactorHandler: SecondFactorHandler,
+	credentialsProvider: CredentialsProvider,
+) {
+	const { logins, worker } = locator
 
 	if (isLoggingOut) {
 		// ignore all errors while logging out
@@ -86,7 +98,7 @@ export async function handleUncaughtErrorImpl(e: Error) {
 			logoutIfNoPasswordPrompt()
 		}
 	} else if (e instanceof SessionExpiredError) {
-		reloginForExpiredSession()
+		reloginForExpiredSession(secondFactorHandler, credentialsProvider)
 	} else if (e instanceof OutOfSyncError) {
 		const isOffline = isOfflineStorageAvailable() && logins.isUserLoggedIn() && logins.getUserController().sessionType === SessionType.Persistent
 
@@ -141,7 +153,7 @@ export async function handleUncaughtErrorImpl(e: Error) {
 
 			// only logged in users can report errors because we send mail for that.
 			if (logins.isUserLoggedIn()) {
-				const { ignored } = await showErrorNotification(e)
+				const { ignored } = await showErrorNotification(e, commonSystemFacade)
 				unknownErrorDialogActive = false
 				if (ignored) {
 					ignoredMessages.push(e.message)
@@ -176,11 +188,11 @@ function logoutIfNoPasswordPrompt() {
 	}
 }
 
-export async function reloginForExpiredSession() {
+export async function reloginForExpiredSession(secondFactorHandler: SecondFactorHandler, credentialsProvider: CredentialsProvider) {
 	if (loginDialogActive) {
 		return
 	}
-	const { logins, loginFacade, secondFactorHandler, credentialsProvider, cacheStorage } = locator
+	const { logins, loginFacade, cacheStorage } = locator
 	// Make sure that partial login part is complete before we will try to make a new session.
 	// Otherwise we run into a race condition where login failure arrives before we initialize userController.
 	await logins.waitForPartialLogin()

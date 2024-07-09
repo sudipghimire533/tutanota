@@ -77,6 +77,7 @@ import { SearchModel } from "../search/model/SearchModel.js"
 import { SettingsFacade } from "../../common/native/common/generatedipc/SettingsFacade.js"
 import type { NativeFileApp } from "../../common/native/common/FileApp.js"
 import { RecipientsSearchModel } from "../../common/misc/RecipientsSearchModel.js"
+import { CommonSystemFacade } from "../../common/native/common/generatedipc/CommonSystemFacade.js"
 
 assertMainOrNode()
 
@@ -106,6 +107,7 @@ export interface SettingsViewAttrs extends TopLevelAttrs {
 	showSetupWizard: () => unknown
 	desktopSettingsFacade: SettingsFacade
 	fileApp: NativeFileApp
+	commonSystemFacade: CommonSystemFacade
 	recipientsSearchModel: () => Promise<RecipientsSearchModel>
 }
 
@@ -132,6 +134,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 	private credentialsProvider: CredentialsProvider
 	private pushService: NativePushServiceApp
 	private search: SearchModel
+	private commonSystemFacade: CommonSystemFacade
 	private recipientsSearchModel: () => Promise<RecipientsSearchModel>
 	private showSetupWizard: () => unknown
 
@@ -149,6 +152,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 		this.pushService = vnode.attrs.pushService
 		this.search = vnode.attrs.search
 		this.recipientsSearchModel = vnode.attrs.recipientsSearchModel
+		this.commonSystemFacade = vnode.attrs.commonSystemFacade
 		this._userFolders = [
 			new SettingsFolder(
 				"login_label",
@@ -768,6 +772,7 @@ export class SettingsView extends BaseTopLevelView implements TopLevelView<Setti
 											dialog.close()
 											this.showSetupWizard()
 										},
+										commonSystemFacade: this.commonSystemFacade,
 									}),
 								allowOkWithReturn: true,
 								okAction: (dialog: Dialog) => dialog.close(),

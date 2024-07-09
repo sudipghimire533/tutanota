@@ -12,6 +12,8 @@ import { DelayedImpls, exposeLocalDelayed, exposeRemote } from "../common/Worker
 import type { RestClient } from "../worker/rest/RestClient"
 import { EntropyDataChunk } from "../worker/facades/EntropyFacade.js"
 import { objToError } from "../common/utils/ErrorUtils.js"
+import { IMailLocator } from "../../../mail-app/mailLocator.js"
+import { ICalendarLocator } from "../../../calendar-app/calendarLocator.js"
 
 assertMainOrNode()
 
@@ -40,7 +42,7 @@ export class WorkerClient {
 		return this._deferredInitialized.promise
 	}
 
-	async init(locator: IMainLocator): Promise<void> {
+	async init(mainInterfaced: MainInterfaces, uncaughtErrorHandler: (error: Error) => unknown): Promise<void> {
 		if (env.mode !== "Test") {
 			const { prefixWithoutFile } = window.tutao.appState
 			// In apps/desktop we load HTML file and url ends on path/index.html so we want to load path/WorkerBootstrap.js.
@@ -49,7 +51,7 @@ export class WorkerClient {
 			// Service worker has similar logic but it has luxury of knowing that it's served as sw.js.
 			const workerUrl = prefixWithoutFile + "/worker-bootstrap.js"
 			const worker = new Worker(workerUrl)
-			this._dispatcher = new MessageDispatcher(new WebWorkerTransport(worker), this.queueCommands(locator), "main-worker")
+			this._dispatcher = new MessageDispatcher(new WebWorkerTransport(worker), this.queueCommands(locator, appLocator), "main-worker")
 			await this._dispatcher.postRequest(new Request("setup", [window.env, this.getInitialEntropy(), client.browserData()]))
 
 			worker.onerror = (e: any) => {
@@ -71,7 +73,7 @@ export class WorkerClient {
 						workerImpl._queue.handleMessage(msg)
 					},
 				} as Transport<WorkerRequestType, MainRequestType>,
-				this.queueCommands(locator),
+				this.queueCommands(locator, appLocator),
 				"main-worker",
 			)
 		}
@@ -79,16 +81,24 @@ export class WorkerClient {
 		this._deferredInitialized.resolve()
 	}
 
-	queueCommands(locator: IMainLocator): Commands<MainRequestType> {
+	queueCommands(locator: IMainLocator, appLocator: IMailLocator | ICalendarLocator): Commands<MainRequestType> {
 		return {
-			execNative: (message: MainRequest) => locator.native.invokeNative(downcast(message.args[0]), downcast(message.args[1])),
+			execNative: (message: MainRequest) => appLocator.native.invokeNative(downcast(message.args[0]), downcast(message.args[1])),
 			error: (message: MainRequest) => {
-				handleUncaughtError(objToError(message.args[0]))
+				this.uncaughtErrorHandler(objToError(message.args[0]))
+				handleUncaughtError(
+					objToError(message.args[0]),
+					appLocator.commonSystemFacade,
+					appLocator.interWindowEventSender,
+					appLocator.search,
+					appLocator.secondFactorHandler,
+					appLocator.credentialsProvider,
+				)
 				return Promise.resolve()
 			},
 			facade: exposeLocalDelayed<DelayedImpls<MainInterface>, MainRequestType>({
 				async loginListener() {
-					return locator.loginListener
+					return appLocator.loginListener
 				},
 				async wsConnectivityListener() {
 					return locator.connectivityModel
@@ -103,7 +113,7 @@ export class WorkerClient {
 					return locator.operationProgressTracker
 				},
 				async infoMessageHandler() {
-					return locator.infoMessageHandler
+					return appLocator.infoMessageHandler
 				},
 			}),
 		}
@@ -148,9 +158,9 @@ export class WorkerClient {
 	}
 }
 
-export function bootstrapWorker(locator: IMainLocator): WorkerClient {
+export function bootstrapWorker(locator: IMainLocator, appLocator: IMailLocator | ICalendarLocator): WorkerClient {
 	const worker = new WorkerClient()
 	const start = Date.now()
-	worker.init(locator).then(() => console.log("worker init time (ms):", Date.now() - start))
+	worker.init(locator, appLocator).then(() => console.log("worker init time (ms):", Date.now() - start))
 	return worker
 }

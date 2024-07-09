@@ -81,7 +81,6 @@ class MainLocator {
 	contactModel!: ContactModel
 	entityClient!: EntityClient
 	progressTracker!: ProgressTracker
-	worker!: WorkerClient
 	loginFacade!: LoginFacade
 	logins!: LoginController
 	header!: Header
@@ -216,26 +215,22 @@ class MainLocator {
 		return new DomainConfigProvider()
 	}
 
-	private readonly _workerDeferred: DeferredObject<WorkerClient>
-	private _entropyCollector!: EntropyCollector
-	private _deferredInitialized: DeferredObject<void> = defer()
-
-	get initialized(): Promise<void> {
-		return this._deferredInitialized.promise
-	}
-
-	constructor() {
-		this._workerDeferred = defer()
-	}
+	// private readonly _workerDeferred: DeferredObject<WorkerClient>
+	// private _entropyCollector!: EntropyCollector
+	// private _deferredInitialized: DeferredObject<void> = defer()
+	//
+	// get initialized(): Promise<void> {
+	// 	return this._deferredInitialized.promise
+	// }
+	//
+	// constructor() {
+	// 	this._workerDeferred = defer()
+	// }
 
 	async init(): Promise<void> {
-		// Split init in two separate parts: creating modules and causing side effects.
-		// We would like to do both on normal init but on HMR we just want to replace modules without a new worker. If we create a new
-		// worker we end up losing state on the worker side (including our session).
-		this.worker = bootstrapWorker(this)
 		await this._createInstances()
 
-		this._deferredInitialized.resolve()
+		//this._deferredInitialized.resolve()
 	}
 
 	async _createInstances() {

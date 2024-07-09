@@ -9,13 +9,20 @@ import { UserError } from "../../common/api/main/UserError"
 import { clientInfoString, getLogAttachments } from "../../common/misc/ErrorReporter"
 import { ExternalLink } from "../../common/gui/base/ExternalLink.js"
 import { isApp } from "../../common/api/common/Env.js"
+import { CommonSystemFacade } from "../../common/native/common/generatedipc/CommonSystemFacade.js"
+import { assertNotNull } from "@tutao/tutanota-utils"
 
 interface AboutDialogAttrs {
 	onShowSetupWizard: () => unknown
+	commonSystemFacade: CommonSystemFacade
 }
 
 export class AboutDialog implements Component<AboutDialogAttrs> {
+	private commonSystemFacade: CommonSystemFacade | null = null
+
 	view(vnode: Vnode<AboutDialogAttrs>): Children {
+		this.commonSystemFacade = vnode.attrs.commonSystemFacade
+
 		return m(".flex.col", [
 			m(".center.mt", "Powered by"),
 			m(".center.mt", m.trust(getColouredTutanotaLogo())),
@@ -61,7 +68,7 @@ export class AboutDialog implements Component<AboutDialogAttrs> {
 
 	async _sendDeviceLogs(): Promise<void> {
 		const timestamp = new Date()
-		const attachments = await getLogAttachments(timestamp)
+		const attachments = await getLogAttachments(assertNotNull(this.commonSystemFacade), timestamp)
 		const mailboxDetails = await locator.mailModel.getUserMailboxDetails()
 		let { message, type, client } = clientInfoString(timestamp, true)
 		message = message

@@ -37,6 +37,7 @@ import { CalendarInfo, CalendarModel } from "../common/calendarFunctionality/Cal
 import { CalendarEventPreviewViewModel } from "./calendar/gui/eventpopup/CalendarEventPreviewViewModel.js"
 import { RecipientsSearchModel } from "../common/misc/RecipientsSearchModel.js"
 import { mailLocator } from "../mail-app/mailLocator.js"
+import { CommonSystemFacade } from "../common/native/common/generatedipc/CommonSystemFacade.js"
 
 assertMainOrNodeBoot()
 bootFinished()
@@ -202,6 +203,7 @@ import("../mail-app/translations/en.js")
 						showSetupWizard: calendarLocator.showSetupWizard,
 						desktopSettingsFacade: calendarLocator.desktopSettingsFacade,
 						fileApp: calendarLocator.fileApp,
+						commonSystemFacade: calendarLocator.commonSystemFacade,
 						recipientsSearchModel: calendarLocator.recipientsSearchModel,
 					}),
 				},
@@ -461,7 +463,7 @@ import("../mail-app/translations/en.js")
 		// after we set up prefixWithoutFile
 		const domainConfig = locator.domainConfigProvider().getCurrentDomainConfig()
 		const serviceworker = await import("../common/serviceworker/ServiceWorkerClient.js")
-		serviceworker.init(domainConfig)
+		serviceworker.init(domainConfig, calendarLocator)
 
 		printJobsMessage(domainConfig)
 	})
@@ -495,13 +497,27 @@ function setupExceptionHandling() {
 		 * see https://stackoverflow.com/questions/72396527/evalerror-possible-side-effect-in-debug-evaluate-in-google-chrome
 		 * */
 		if (evt.error && !evt.defaultPrevented) {
-			handleUncaughtError(evt.error)
+			handleUncaughtError(
+				evt.error,
+				calendarLocator.commonSystemFacade,
+				calendarLocator.interWindowEventSender,
+				calendarLocator.search,
+				calendarLocator.secondFactorHandler,
+				calendarLocator.credentialsProvider,
+			)
 			evt.preventDefault()
 		}
 	})
 	// Handle unhandled native JS Promise rejections
 	window.addEventListener("unhandledrejection", function (evt) {
-		handleUncaughtError(evt.reason)
+		handleUncaughtError(
+			evt.reason,
+			calendarLocator.commonSystemFacade,
+			calendarLocator.interWindowEventSender,
+			calendarLocator.search,
+			calendarLocator.secondFactorHandler,
+			calendarLocator.credentialsProvider,
+		)
 		evt.preventDefault()
 	})
 }

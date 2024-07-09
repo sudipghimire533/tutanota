@@ -2,7 +2,7 @@ import type { CredentialRemovalHandler } from "../common/login/CredentialRemoval
 import { isAndroidApp, isApp, isBrowser, isDesktop, isElectronClient, isIOSApp } from "../common/api/common/Env.js"
 import { locator } from "../common/api/main/MainLocator.js"
 import { PostLoginActions } from "../common/login/PostLoginActions.js"
-import { assertNotNull, lazy, lazyAsync, lazyMemoized, ofClass } from "@tutao/tutanota-utils"
+import { assertNotNull, defer, DeferredObject, lazy, lazyAsync, lazyMemoized, ofClass } from "@tutao/tutanota-utils"
 import { windowFacade } from "../common/misc/WindowFacade.js"
 import { deviceConfig } from "../common/misc/DeviceConfig.js"
 import { WebDesktopFacade } from "../common/native/main/WebDesktopFacade.js"
@@ -58,11 +58,13 @@ import { DrawerMenuAttrs } from "../common/gui/nav/DrawerMenu.js"
 import { SettingsFacade } from "../common/native/common/generatedipc/SettingsFacade.js"
 import { DesktopSystemFacade } from "../common/native/common/generatedipc/DesktopSystemFacade.js"
 import { SearchBar } from "../mail-app/search/SearchBar.js"
+import { bootstrapWorker, WorkerClient } from "../common/api/main/WorkerClient.js"
 
 class CalendarLocator {
 	private entropyCollector!: EntropyCollector
 	private nativeInterfaces: NativeInterfaces | null = null
 
+	worker!: WorkerClient
 	fileController!: FileController
 	credentialsProvider!: CredentialsProvider
 	searchTextFacade!: SearchTextInAppFacade
@@ -77,6 +79,30 @@ class CalendarLocator {
 	infoMessageHandler!: InfoMessageHandler
 	desktopSettingsFacade!: SettingsFacade
 	desktopSystemFacade!: DesktopSystemFacade
+
+	private readonly workerDeferred: DeferredObject<WorkerClient>
+	private deferredInitialized: DeferredObject<void> = defer()
+
+	get initialized(): Promise<void> {
+		return this.deferredInitialized.promise
+	}
+
+	constructor() {
+		this.workerDeferred = defer()
+	}
+
+	async init(): Promise<void> {
+		// Split init in two separate parts: creating modules and causing side effects.
+		// We would like to do both on normal init but on HMR we just want to replace modules without a new worker. If we create a new
+		// worker we end up losing state on the worker side (including our session).
+		this.worker = bootstrapWorker(locator, this)
+		await this.createInstances()
+
+		this.entropyCollector = new EntropyCollector(locator.entropyFacade, await locator.scheduler(), window)
+		this.entropyCollector.start()
+
+		this.deferredInitialized.resolve()
+	}
 
 	// Unique to Calendar Locator
 	async credentialsRemovalHandler(): Promise<CredentialRemovalHandler> {
@@ -224,16 +250,6 @@ class CalendarLocator {
 
 	// **** end of Unique to Calendar Locator
 
-	async init(): Promise<void> {
-		// await this.createInstances()
-		await this.createInstances()
-		//this.deferredInitialized.resolve()
-
-		this.entropyCollector = new EntropyCollector(locator.entropyFacade, await locator.scheduler(), window)
-
-		this.entropyCollector.start()
-	}
-
 	async createInstances() {
 		this.credentialsProvider = await this.createCredentialsProvider()
 		this.secondFactorHandler = new SecondFactorHandler(
@@ -242,7 +258,6 @@ class CalendarLocator {
 			this.webAuthn,
 			locator.loginFacade,
 			locator.domainConfigProvider(),
-			calendarLocator.secondFactorHandler,
 			calendarLocator.credentialsProvider,
 		)
 		this.loginListener = new PageContextLoginListener(this.secondFactorHandler)

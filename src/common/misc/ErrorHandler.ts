@@ -4,6 +4,11 @@
  */
 import { assertMainOrNodeBoot, isTest } from "../api/common/Env"
 import { delay } from "@tutao/tutanota-utils"
+import { CommonSystemFacade } from "../native/common/generatedipc/CommonSystemFacade.js"
+import { InterWindowEventFacadeSendDispatcher } from "../native/common/generatedipc/InterWindowEventFacadeSendDispatcher.js"
+import { SearchModel } from "../../mail-app/search/model/SearchModel.js"
+import { SecondFactorHandler } from "./2fa/SecondFactorHandler.js"
+import { CredentialsProvider } from "./credentials/CredentialsProvider.js"
 
 assertMainOrNodeBoot()
 
@@ -40,7 +45,14 @@ function produceThrottledFunction<R>(ms: number, fn: () => Promise<R>): () => Pr
  * */
 const importErrorHandler = produceThrottledFunction(200, () => import("./ErrorHandlerImpl.js"))
 
-export async function handleUncaughtError(e: Error) {
+export async function handleUncaughtError(
+	e: Error,
+	commonSystemFacade: CommonSystemFacade,
+	interWindowEventSender: InterWindowEventFacadeSendDispatcher,
+	search: SearchModel,
+	secondFactorHandler: SecondFactorHandler,
+	credentialsProvider: CredentialsProvider,
+) {
 	if (isTest()) {
 		throw e
 	}
@@ -48,7 +60,7 @@ export async function handleUncaughtError(e: Error) {
 	try {
 		console.log("error", e, e.stack)
 		const { handleUncaughtErrorImpl } = await importErrorHandler()
-		await handleUncaughtErrorImpl(e)
+		await handleUncaughtErrorImpl(e, commonSystemFacade, interWindowEventSender, search, secondFactorHandler, credentialsProvider)
 	} catch (e) {
 		console.error("Encountered error when trying to handle errors with ErrorHandlerImpl", e)
 	}

@@ -3,8 +3,7 @@ import { isSameDayOfDate, pad } from "@tutao/tutanota-utils"
 import type { UserSettingsGroupRoot } from "../api/entities/tutanota/TypeRefs.js"
 import { TimeFormat } from "../api/common/TutanotaConstants"
 import { assertMainOrNode } from "../api/common/Env"
-
-import { cleanMailAddress } from "../calendarFunctionality/commonCalendarUtils.js"
+import { cleanMailAddress } from "../mailFunctionality/CommonMailUtils.js"
 
 assertMainOrNode()
 

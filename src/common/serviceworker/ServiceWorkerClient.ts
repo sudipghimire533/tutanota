@@ -4,6 +4,8 @@ import { windowFacade } from "../misc/WindowFacade"
 import m, { Component } from "mithril"
 import { handleUncaughtError } from "../misc/ErrorHandler"
 import { isNotSupportedError, isSecurityError, objToError } from "../api/common/utils/ErrorUtils.js"
+import { IMailLocator } from "../../mail-app/mailLocator.js"
+import { ICalendarLocator } from "../../calendar-app/calendarLocator.js"
 
 function showUpdateOverlay({ showChangelogLink, onUpdate }: { showChangelogLink: boolean; onUpdate: () => void }) {
 	const notificationMessage: Component = {
@@ -56,7 +58,7 @@ function showUpdateMessageIfNeeded(registration: ServiceWorkerRegistration, doma
 	}
 }
 
-export function init(domainConfig: DomainConfig) {
+export function init(domainConfig: DomainConfig, locator: IMailLocator | ICalendarLocator) {
 	const serviceWorker = navigator.serviceWorker
 
 	if (serviceWorker) {
@@ -97,7 +99,14 @@ export function init(domainConfig: DomainConfig) {
 
 						if (event.data.type === "error") {
 							const unserializedError = objToError(event.data.value)
-							handleUncaughtError(unserializedError)
+							handleUncaughtError(
+								unserializedError,
+								locator.commonSystemFacade,
+								locator.interWindowEventSender,
+								locator.search,
+								locator.secondFactorHandler,
+								locator.credentialsProvider,
+							)
 						}
 					})
 				})

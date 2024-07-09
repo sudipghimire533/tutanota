@@ -175,15 +175,11 @@ export class NavButton implements Component<NavButtonAttrs> {
 		if (!this._isExternalUrl(a.href)) {
 			m.route.set(this._getUrl(a.href))
 
-			try {
-				if (a.click != null) {
-					a.click(event, dom)
-				}
-
-				event.preventDefault()
-			} catch (e) {
-				handleUncaughtError(e)
+			if (a.click != null) {
+				a.click(event, dom)
 			}
+
+			event.preventDefault()
 		}
 	}
 

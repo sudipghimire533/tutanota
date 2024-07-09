@@ -12,7 +12,7 @@ import { CalendarEvent, CalendarEventAttendee, Mail, type MailboxProperties } fr
 import { getDisplayedSender, getEnabledMailAddressesWithUser } from "../common/mailFunctionality/CommonMailUtils.js"
 import { ContactImporter } from "./contacts/ContactImporter.js"
 import { AddNotificationEmailDialog } from "./settings/AddNotificationEmailDialog.js"
-import { assert, assertNotNull, lazy, lazyAsync, lazyMemoized, noOp, ofClass } from "@tutao/tutanota-utils"
+import { assert, assertNotNull, defer, DeferredObject, lazy, lazyAsync, lazyMemoized, noOp, ofClass } from "@tutao/tutanota-utils"
 import { deviceConfig } from "../common/misc/DeviceConfig.js"
 import { locator } from "../common/api/main/MainLocator.js"
 import { ScopedRouter } from "../common/gui/ScopedRouter.js"
@@ -68,6 +68,11 @@ import { notifications } from "../common/gui/Notifications.js"
 import { CalendarInviteHandler } from "../calendar-app/calendar/view/CalendarInvites.js"
 import type { AlarmScheduler } from "../calendar-app/calendar/date/AlarmScheduler.js"
 import { SearchBar } from "./search/SearchBar.js"
+import { bootstrapWorker, WorkerClient } from "../common/api/main/WorkerClient.js"
+import { DiagnosticsChannel } from "undici"
+import Error = DiagnosticsChannel.Error
+import { handleUncaughtError } from "../common/misc/ErrorHandler.js"
+import { objToError } from "../common/api/common/utils/ErrorUtils.js"
 
 assertMainOrNode()
 
@@ -76,6 +81,7 @@ class MailLocator {
 	private entropyCollector!: EntropyCollector
 	minimizedMailModel!: MinimizedMailEditorViewModel
 
+	worker!: WorkerClient
 	search!: SearchModel
 	searchBar!: SearchBar
 	credentialsProvider!: CredentialsProvider
@@ -90,6 +96,42 @@ class MailLocator {
 	interWindowEventSender!: InterWindowEventFacadeSendDispatcher
 	loginListener!: PageContextLoginListener
 	infoMessageHandler!: InfoMessageHandler
+
+	private readonly workerDeferred: DeferredObject<WorkerClient>
+	private deferredInitialized: DeferredObject<void> = defer()
+
+	get initialized(): Promise<void> {
+		return this.deferredInitialized.promise
+	}
+
+	constructor() {
+		this.workerDeferred = defer()
+	}
+
+	async init(): Promise<void> {
+		// Split init in two separate parts: creating modules and causing side effects.
+		// We would like to do both on normal init but on HMR we just want to replace modules without a new worker. If we create a new
+		// worker we end up losing state on the worker side (including our session).
+		this.worker = bootstrapWorker(locator, this, this.uncaughtErrorHandler)
+
+		await this.createInstances()
+
+		this.entropyCollector = new EntropyCollector(locator.entropyFacade, await locator.scheduler(), window)
+		this.entropyCollector.start()
+
+		this.deferredInitialized.resolve()
+	}
+
+	uncaughtErrorHandler(error: Error) {
+		handleUncaughtError(
+			objToError(message.args[0]),
+			appLocator.commonSystemFacade,
+			appLocator.interWindowEventSender,
+			appLocator.search,
+			appLocator.secondFactorHandler,
+			appLocator.credentialsProvider,
+		)
+	}
 
 	async createInstances() {
 		this.minimizedMailModel = new MinimizedMailEditorViewModel()
@@ -178,15 +220,6 @@ class MailLocator {
 			this.nativeInterfaces == null
 				? new FileControllerBrowser(locator.blobFacade, guiDownload)
 				: new FileControllerNative(locator.blobFacade, guiDownload, this.nativeInterfaces.fileApp)
-	}
-
-	async init(): Promise<void> {
-		await this.createInstances()
-
-		this.entropyCollector = new EntropyCollector(locator.entropyFacade, await locator.scheduler(), window)
-		this.entropyCollector.start()
-
-		//this.deferredInitialized.resolve()
 	}
 
 	// Unique to Mail Locator
