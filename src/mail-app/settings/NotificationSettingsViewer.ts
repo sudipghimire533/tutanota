@@ -5,7 +5,7 @@ import { ExtendedNotificationMode } from "../../common/native/common/generatedip
 import Stream from "mithril/stream"
 import stream from "mithril/stream"
 import { PushIdentifier, PushIdentifierTypeRef, User } from "../../common/api/entities/sys/TypeRefs.js"
-import { locator } from "../../common/api/main/MainLocator.js"
+import { locator } from "../../common/api/main/CommonLocator.js"
 import { lang } from "../../common/misc/LanguageViewModel.js"
 import { IconButton } from "../../common/gui/base/IconButton.js"
 import { Icons } from "../../common/gui/base/icons/Icons.js"

@@ -4,7 +4,7 @@ import { TranslationKey } from "../../common/misc/LanguageViewModel.js"
 import { themeController } from "../../common/gui/theme.js"
 import { CancelledError } from "../../common/api/common/error/CancelledError.js"
 import { showRequestPasswordDialog } from "../../common/misc/passwords/PasswordRequestDialog.js"
-import { IMainLocator } from "../../common/api/main/MainLocator.js"
+import { IMainLocator } from "../../common/api/main/CommonLocator.js"
 import { Dialog } from "../../common/gui/base/Dialog.js"
 
 export class CalendarWebCommonNativeFacade implements CommonNativeFacade {
@@ -96,7 +96,7 @@ export class CalendarWebCommonNativeFacade implements CommonNativeFacade {
 	}
 
 	private static async getInitializedLocator(): Promise<IMainLocator> {
-		const { locator } = await import("../../common/api/main/MainLocator")
+		const { locator } = await import("../../common/api/main/CommonLocator")
 		await locator.initialized
 		return locator
 	}

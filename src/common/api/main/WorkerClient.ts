@@ -2,7 +2,6 @@ import type { Commands } from "../common/threading/MessageDispatcher.js"
 import { MessageDispatcher, Request } from "../common/threading/MessageDispatcher.js"
 import { Transport, WebWorkerTransport } from "../common/threading/Transport.js"
 import { assertMainOrNode } from "../common/Env"
-import type { IMainLocator } from "./MainLocator"
 import { client } from "../../misc/ClientDetector"
 import type { DeferredObject } from "@tutao/tutanota-utils"
 import { defer, downcast } from "@tutao/tutanota-utils"
@@ -42,7 +41,7 @@ export class WorkerClient {
 		return this._deferredInitialized.promise
 	}
 
-	async init(mainInterfaced: MainInterfaces, uncaughtErrorHandler: (error: Error) => unknown): Promise<void> {
+	async init(locator: IMailLocator | ICalendarLocator): Promise<void> {
 		if (env.mode !== "Test") {
 			const { prefixWithoutFile } = window.tutao.appState
 			// In apps/desktop we load HTML file and url ends on path/index.html so we want to load path/WorkerBootstrap.js.
@@ -51,7 +50,7 @@ export class WorkerClient {
 			// Service worker has similar logic but it has luxury of knowing that it's served as sw.js.
 			const workerUrl = prefixWithoutFile + "/worker-bootstrap.js"
 			const worker = new Worker(workerUrl)
-			this._dispatcher = new MessageDispatcher(new WebWorkerTransport(worker), this.queueCommands(locator, appLocator), "main-worker")
+			this._dispatcher = new MessageDispatcher(new WebWorkerTransport(worker), this.queueCommands(locator), "main-worker")
 			await this._dispatcher.postRequest(new Request("setup", [window.env, this.getInitialEntropy(), client.browserData()]))
 
 			worker.onerror = (e: any) => {
@@ -73,7 +72,7 @@ export class WorkerClient {
 						workerImpl._queue.handleMessage(msg)
 					},
 				} as Transport<WorkerRequestType, MainRequestType>,
-				this.queueCommands(locator, appLocator),
+				this.queueCommands(locator),
 				"main-worker",
 			)
 		}
@@ -81,24 +80,23 @@ export class WorkerClient {
 		this._deferredInitialized.resolve()
 	}
 
-	queueCommands(locator: IMainLocator, appLocator: IMailLocator | ICalendarLocator): Commands<MainRequestType> {
+	queueCommands(locator: IMailLocator | ICalendarLocator): Commands<MainRequestType> {
 		return {
-			execNative: (message: MainRequest) => appLocator.native.invokeNative(downcast(message.args[0]), downcast(message.args[1])),
+			execNative: (message: MainRequest) => locator.native.invokeNative(downcast(message.args[0]), downcast(message.args[1])),
 			error: (message: MainRequest) => {
-				this.uncaughtErrorHandler(objToError(message.args[0]))
 				handleUncaughtError(
 					objToError(message.args[0]),
-					appLocator.commonSystemFacade,
-					appLocator.interWindowEventSender,
-					appLocator.search,
-					appLocator.secondFactorHandler,
-					appLocator.credentialsProvider,
+					locator.commonSystemFacade,
+					locator.interWindowEventSender,
+					locator.search,
+					locator.secondFactorHandler,
+					locator.credentialsProvider,
 				)
 				return Promise.resolve()
 			},
 			facade: exposeLocalDelayed<DelayedImpls<MainInterface>, MainRequestType>({
 				async loginListener() {
-					return appLocator.loginListener
+					return locator.loginListener
 				},
 				async wsConnectivityListener() {
 					return locator.connectivityModel
@@ -113,7 +111,7 @@ export class WorkerClient {
 					return locator.operationProgressTracker
 				},
 				async infoMessageHandler() {
-					return appLocator.infoMessageHandler
+					return locator.infoMessageHandler
 				},
 			}),
 		}
@@ -158,9 +156,9 @@ export class WorkerClient {
 	}
 }
 
-export function bootstrapWorker(locator: IMainLocator, appLocator: IMailLocator | ICalendarLocator): WorkerClient {
+export function bootstrapWorker(appLocator: IMailLocator | ICalendarLocator): WorkerClient {
 	const worker = new WorkerClient()
 	const start = Date.now()
-	worker.init(locator, appLocator).then(() => console.log("worker init time (ms):", Date.now() - start))
+	worker.init(appLocator).then(() => console.log("worker init time (ms):", Date.now() - start))
 	return worker
 }

@@ -29,7 +29,7 @@ import { LockedError, NotFoundError } from "../../../common/api/common/error/Res
 import { getContactSelectionMessage, MultiContactViewer } from "./MultiContactViewer"
 import { BootIcons } from "../../../common/gui/base/icons/BootIcons"
 import { showProgressDialog } from "../../../common/gui/dialogs/ProgressDialog"
-import { locator } from "../../../common/api/main/MainLocator"
+import { locator } from "../../../common/api/main/CommonLocator"
 import { ContactMergeView } from "./ContactMergeView"
 import { getMergeableContacts, mergeContacts } from "../ContactMergeUtils"
 import { exportContacts } from "../VCardExporter"

@@ -7,7 +7,7 @@ import { Dialog } from "../../../common/gui/base/Dialog"
 import { InfoLink, lang } from "../../../common/misc/LanguageViewModel"
 import type { MailboxDetail } from "../../../common/mailFunctionality/MailModel.js"
 import { checkApprovalStatus } from "../../../common/misc/LoginUtils"
-import { locator } from "../../../common/api/main/MainLocator"
+import { locator } from "../../../common/api/main/CommonLocator"
 import {
 	ALLOWED_IMAGE_FORMATS,
 	ConversationType,
@@ -320,7 +320,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 			icon: Icons.Attachment,
 			size: ButtonSize.Compact,
 		}
-		const plaintextFormatting = locator.logins.getUserController().props.sendPlaintextOnly
+		const plaintextFormatting = mailLocator.logins.getUserController().props.sendPlaintextOnly
 		this.editor.setCreatesLists(!plaintextFormatting)
 
 		const toolbarButton = () =>
@@ -357,7 +357,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 
 		let editCustomNotificationMailAttrs: IconButtonAttrs | null = null
 
-		if (locator.logins.getUserController().isGlobalAdmin()) {
+		if (mailLocator.logins.getUserController().isGlobalAdmin()) {
 			editCustomNotificationMailAttrs = attachDropdown({
 				mainButtonAttrs: {
 					title: "more_label",
@@ -369,7 +369,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 						label: "add_action",
 						click: () => {
 							import("../../settings/EditNotificationEmailDialog").then(({ showAddOrEditNotificationEmailDialog }) =>
-								showAddOrEditNotificationEmailDialog(locator.logins.getUserController()),
+								showAddOrEditNotificationEmailDialog(mailLocator.logins.getUserController()),
 							)
 						},
 					},
@@ -377,7 +377,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 						label: "edit_action",
 						click: () => {
 							import("../../settings/EditNotificationEmailDialog").then(({ showAddOrEditNotificationEmailDialog }) =>
-								showAddOrEditNotificationEmailDialog(locator.logins.getUserController(), model.getSelectedNotificationLanguageCode()),
+								showAddOrEditNotificationEmailDialog(mailLocator.logins.getUserController(), model.getSelectedNotificationLanguageCode()),
 							)
 						},
 					},
@@ -710,9 +710,9 @@ export class MailEditor implements Component<MailEditorAttrs> {
 	private async getRecipientClickedContextButtons(recipient: ResolvableRecipient, field: RecipientField): Promise<DropdownChildAttrs[]> {
 		const { entity, contactModel } = this.sendMailModel
 
-		const canEditBubbleRecipient = locator.logins.getUserController().isInternalUser() && !locator.logins.isEnabled(FeatureType.DisableContacts)
+		const canEditBubbleRecipient = mailLocator.logins.getUserController().isInternalUser() && !mailLocator.logins.isEnabled(FeatureType.DisableContacts)
 
-		const canRemoveBubble = locator.logins.getUserController().isInternalUser()
+		const canRemoveBubble = mailLocator.logins.getUserController().isInternalUser()
 
 		const createdContactReceiver = (contactElementId: Id) => {
 			const mailAddress = recipient.address
@@ -747,7 +747,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 					click: () => {
 						// contact list
 						contactModel.getContactListId().then((contactListId) => {
-							const newContact = createNewContact(locator.logins.getUserController().user, recipient.address, recipient.name)
+							const newContact = createNewContact(mailLocator.logins.getUserController().user, recipient.address, recipient.name)
 							import("../../contacts/ContactEditor").then(({ ContactEditor }) => {
 								// external users don't see edit buttons
 								new ContactEditor(entity, newContact, assertNotNull(contactListId), createdContactReceiver).show()
@@ -867,7 +867,7 @@ async function createMailEditorDialog(model: SendMailModel, blockExternalContent
 		}
 		// If the mail is unchanged and there /is/ a preexisting draft, there was no change and the mail is already saved
 		else saveStatus = stream<SaveStatus>({ status: SaveStatusEnum.Saved })
-		showMinimizedMailEditor(dialog, model, mailLocator.minimizedMailModel, locator.eventController, dispose, saveStatus)
+		showMinimizedMailEditor(dialog, model, mailLocator.minimizedMailModel, mailLocator.eventController, dispose, saveStatus)
 	}
 
 	let windowCloseUnsubscribe = () => {}
@@ -906,21 +906,21 @@ async function createMailEditorDialog(model: SendMailModel, blockExternalContent
 		},
 	}
 	const templatePopupModel =
-		locator.logins.isInternalUserLoggedIn() && client.isDesktopDevice()
-			? new TemplatePopupModel(locator.eventController, locator.logins, locator.entityClient)
+		mailLocator.logins.isInternalUserLoggedIn() && client.isDesktopDevice()
+			? new TemplatePopupModel(mailLocator.eventController, mailLocator.logins, mailLocator.entityClient)
 			: null
 
 	const createKnowledgebaseButtonAttrs = async (editor: Editor) => {
-		if (locator.logins.isInternalUserLoggedIn()) {
-			const customer = await locator.logins.getUserController().loadCustomer()
+		if (mailLocator.logins.isInternalUserLoggedIn()) {
+			const customer = await mailLocator.logins.getUserController().loadCustomer()
 			// only create knowledgebase button for internal users with valid template group and enabled KnowledgebaseFeature
 			if (
 				styles.isDesktopLayout() &&
 				templatePopupModel &&
-				locator.logins.getUserController().getTemplateMemberships().length > 0 &&
+				mailLocator.logins.getUserController().getTemplateMemberships().length > 0 &&
 				isCustomizationEnabledForCustomer(customer, FeatureType.KnowledgeBase)
 			) {
-				const knowledgebaseModel = new KnowledgeBaseModel(locator.eventController, locator.entityClient, locator.logins.getUserController())
+				const knowledgebaseModel = new KnowledgeBaseModel(mailLocator.eventController, mailLocator.entityClient, mailLocator.logins.getUserController())
 				await knowledgebaseModel.init()
 
 				// make sure we dispose knowledbaseModel once the editor is closed
@@ -1001,9 +1001,9 @@ async function createMailEditorDialog(model: SendMailModel, blockExternalContent
 export async function newMailEditor(mailboxDetails: MailboxDetail): Promise<Dialog> {
 	// We check approval status so as to get a dialog informing the user that they cannot send mails
 	// but we still want to open the mail editor because they should still be able to contact sales@tutao.de
-	await checkApprovalStatus(locator.logins, false)
+	await checkApprovalStatus(mailLocator.logins, false)
 	const { appendEmailSignature } = await import("../signature/Signature")
-	const signature = appendEmailSignature("", locator.logins.getUserController().props)
+	const signature = appendEmailSignature("", mailLocator.logins.getUserController().props)
 	const detailsProperties = await getMailboxDetailsAndProperties(mailboxDetails)
 	return newMailEditorFromTemplate(detailsProperties.mailboxDetails, {}, "", signature)
 }
@@ -1020,7 +1020,7 @@ async function getExternalContentRulesForEditor(model: SendMailModel, currentSta
 			blockExternalContent: false,
 		}
 	} else {
-		const externalImageRule = await locator.configFacade.getExternalImageRule(previousMail.sender.address).catch((e: unknown) => {
+		const externalImageRule = await mailLocator.configFacade.getExternalImageRule(previousMail.sender.address).catch((e: unknown) => {
 			console.log("Error getting external image rule:", e)
 			return ExternalImageRule.None
 		})
@@ -1029,7 +1029,7 @@ async function getExternalContentRulesForEditor(model: SendMailModel, currentSta
 		if (previousMail.authStatus !== null) {
 			isAuthenticatedMail = previousMail.authStatus === MailAuthenticationStatus.AUTHENTICATED
 		} else if (!isLegacyMail(previousMail)) {
-			const mailDetails = await locator.mailFacade.loadMailDetailsBlob(previousMail)
+			const mailDetails = await mailLocator.mailFacade.loadMailDetailsBlob(previousMail)
 			isAuthenticatedMail = mailDetails.authStatus === MailAuthenticationStatus.AUTHENTICATED
 		} else {
 			isAuthenticatedMail = false
@@ -1065,7 +1065,7 @@ export async function newMailEditorAsResponse(
 	mailboxDetails?: MailboxDetail,
 ): Promise<Dialog> {
 	const detailsProperties = await getMailboxDetailsAndProperties(mailboxDetails)
-	const model = await locator.sendMailModel(detailsProperties.mailboxDetails, detailsProperties.mailboxProperties)
+	const model = await mailLocator.sendMailModel(detailsProperties.mailboxDetails, detailsProperties.mailboxProperties)
 	await model.initAsResponse(args, inlineImages)
 
 	const externalImageRules = await getExternalContentRulesForEditor(model, blockExternalContent)
@@ -1080,7 +1080,7 @@ export async function newMailEditorFromDraft(
 	mailboxDetails?: MailboxDetail,
 ): Promise<Dialog> {
 	const detailsProperties = await getMailboxDetailsAndProperties(mailboxDetails)
-	const model = await locator.sendMailModel(detailsProperties.mailboxDetails, detailsProperties.mailboxProperties)
+	const model = await mailLocator.sendMailModel(detailsProperties.mailboxDetails, detailsProperties.mailboxProperties)
 	await model.initWithDraft(attachments, mailWrapper, inlineImages)
 	const externalImageRules = await getExternalContentRulesForEditor(model, blockExternalContent)
 	return createMailEditorDialog(model, externalImageRules?.blockExternalContent, externalImageRules?.alwaysBlockExternalContent)
@@ -1132,7 +1132,7 @@ export async function newMailtoUrlMailEditor(mailtoUrl: string, confidential: bo
 		detailsProperties.mailboxDetails,
 		mailTo.recipients,
 		mailTo.subject || "",
-		appendEmailSignature(mailTo.body || "", locator.logins.getUserController().props),
+		appendEmailSignature(mailTo.body || "", mailLocator.logins.getUserController().props),
 		dataFiles,
 		confidential,
 		undefined,
@@ -1150,8 +1150,8 @@ export async function newMailEditorFromTemplate(
 	senderMailAddress?: string,
 	initialChangedState?: boolean,
 ): Promise<Dialog> {
-	const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-	return locator
+	const mailboxProperties = await mailLocator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+	return mailLocator
 		.sendMailModel(mailboxDetails, mailboxProperties)
 		.then((model) => model.initWithTemplate(recipients, subject, bodyText, attachments, confidential, senderMailAddress, initialChangedState))
 		.then((model) => createMailEditorDialog(model))
@@ -1179,7 +1179,7 @@ export function getSupportMailSignature(): Promise<string> {
  * @returns true if sending support email is allowed, false if upgrade to premium is required (may have been ordered)
  */
 export async function writeSupportMail(subject: string = "", mailboxDetails?: MailboxDetail): Promise<boolean> {
-	if (locator.logins.getUserController().isPremiumAccount()) {
+	if (mailLocator.logins.getUserController().isPremiumAccount()) {
 		const detailsProperties = await getMailboxDetailsAndProperties(mailboxDetails)
 		const recipients = {
 			to: [
@@ -1204,7 +1204,7 @@ export async function writeSupportMail(subject: string = "", mailboxDetails?: Ma
 			})
 			.then((confirm) => {
 				if (confirm) {
-					import("../../../common/subscription/UpgradeSubscriptionWizard").then((utils) => utils.showUpgradeWizard(locator.logins))
+					import("../../../common/subscription/UpgradeSubscriptionWizard").then((utils) => utils.showUpgradeWizard(mailLocator.logins))
 				}
 			})
 			.then(() => false)
@@ -1218,12 +1218,12 @@ export async function writeSupportMail(subject: string = "", mailboxDetails?: Ma
  */
 export async function writeInviteMail(referralLink: string) {
 	const detailsProperties = await getMailboxDetailsAndProperties(null)
-	const username = locator.logins.getUserController().userGroupInfo.name
+	const username = mailLocator.logins.getUserController().userGroupInfo.name
 	const body = lang.get("invitationMailBody_msg", {
 		"{registrationLink}": referralLink,
 		"{username}": username,
 	})
-	const { invitationSubject } = await locator.serviceExecutor.get(TranslationService, createTranslationGetIn({ lang: lang.code }))
+	const { invitationSubject } = await mailLocator.serviceExecutor.get(TranslationService, createTranslationGetIn({ lang: lang.code }))
 	const dialog = await newMailEditorFromTemplate(detailsProperties.mailboxDetails, {}, invitationSubject, body, [], false)
 	dialog.show()
 }
@@ -1240,14 +1240,14 @@ export async function writeGiftCardMail(link: string, svg: SVGElement, mailboxDe
 	const bodyText = lang
 		.get("defaultShareGiftCardBody_msg", {
 			"{link}": '<a href="' + link + '">' + link + "</a>",
-			"{username}": locator.logins.getUserController().userGroupInfo.name,
+			"{username}": mailLocator.logins.getUserController().userGroupInfo.name,
 		})
 		.split("\n")
 		.join("<br />")
-	const { giftCardSubject } = await locator.serviceExecutor.get(TranslationService, createTranslationGetIn({ lang: lang.code }))
-	locator
+	const { giftCardSubject } = await mailLocator.serviceExecutor.get(TranslationService, createTranslationGetIn({ lang: lang.code }))
+	mailLocator
 		.sendMailModel(detailsProperties.mailboxDetails, detailsProperties.mailboxProperties)
-		.then((model) => model.initWithTemplate({}, giftCardSubject, appendEmailSignature(bodyText, locator.logins.getUserController().props), [], false))
+		.then((model) => model.initWithTemplate({}, giftCardSubject, appendEmailSignature(bodyText, mailLocator.logins.getUserController().props), [], false))
 		.then((model) => createMailEditorDialog(model, false))
 		.then((dialog) => dialog.show())
 }
@@ -1255,7 +1255,7 @@ export async function writeGiftCardMail(link: string, svg: SVGElement, mailboxDe
 async function getMailboxDetailsAndProperties(
 	mailboxDetails: MailboxDetail | null | undefined,
 ): Promise<{ mailboxDetails: MailboxDetail; mailboxProperties: MailboxProperties }> {
-	mailboxDetails = mailboxDetails ?? (await locator.mailModel.getUserMailboxDetails())
-	const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+	mailboxDetails = mailboxDetails ?? (await mailLocator.mailModel.getUserMailboxDetails())
+	const mailboxProperties = await mailLocator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
 	return { mailboxDetails, mailboxProperties }
 }

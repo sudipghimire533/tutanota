@@ -15,8 +15,9 @@ import { replaceInlineImagesWithCids } from "../view/MailGuiUtils"
 import { TextField } from "../../../common/gui/base/TextField.js"
 import { DialogHeaderBarAttrs } from "../../../common/gui/base/DialogHeaderBar"
 import { RichTextToolbar } from "../../../common/gui/base/RichTextToolbar.js"
-import { locator } from "../../../common/api/main/MainLocator.js"
+import { locator } from "../../../common/api/main/CommonLocator.js"
 import { getDefaultSender } from "../../../common/mailFunctionality/CommonMailUtils.js"
+import { mailLocator } from "../../mailLocator.js"
 
 type PressContact = {
 	email: string
@@ -29,7 +30,7 @@ export function openPressReleaseEditor(mailboxDetails: MailboxDetail): void {
 	}
 
 	async function send() {
-		const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+		const mailboxProperties = await mailLocator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
 		const body = pressRelease.bodyHtml()
 		const subject = pressRelease.subject()
 		let recipients
@@ -69,7 +70,7 @@ export function openPressReleaseEditor(mailboxDetails: MailboxDetail): void {
 
 		if (choice === "test") {
 			recipients.splice(0, recipients.length, {
-				email: getDefaultSender(locator.logins, mailboxDetails),
+				email: getDefaultSender(mailLocator.logins, mailboxDetails),
 				greeting: "Hi Test Recipient",
 			})
 		}
@@ -112,8 +113,8 @@ export function openPressReleaseEditor(mailboxDetails: MailboxDetail): void {
 			const bodyWithGreeting = `<p>${recipient.greeting},</p>${body}`
 
 			try {
-				const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-				const sendMailModel = await locator.sendMailModel(mailboxDetails, mailboxProperties)
+				const mailboxProperties = await mailLocator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+				const sendMailModel = await mailLocator.sendMailModel(mailboxDetails, mailboxProperties)
 				const model = await sendMailModel.initWithTemplate(
 					{
 						to: [

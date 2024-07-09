@@ -36,8 +36,7 @@ import { MailboxDetail } from "../common/mailFunctionality/MailModel.js"
 import { CalendarInfo, CalendarModel } from "../common/calendarFunctionality/CalendarModel.js"
 import { CalendarEventPreviewViewModel } from "./calendar/gui/eventpopup/CalendarEventPreviewViewModel.js"
 import { RecipientsSearchModel } from "../common/misc/RecipientsSearchModel.js"
-import { mailLocator } from "../mail-app/mailLocator.js"
-import { CommonSystemFacade } from "../common/native/common/generatedipc/CommonSystemFacade.js"
+import { initCommonLocator, locator } from "../common/api/main/CommonLocator.js"
 
 assertMainOrNodeBoot()
 bootFinished()
@@ -82,21 +81,19 @@ import("../mail-app/translations/en.js")
 		await import("../common/gui/main-styles.js")
 
 		// do this after lang initialized
-
-		const { locator } = await import("../common/api/main/MainLocator.js")
-		await locator.init()
-
-		const { calendarLocator } = await import("./calendarLocator.js")
+		const { calendarLocator } = await import("./calendarLocator")
 		await calendarLocator.init()
+
+		initCommonLocator(calendarLocator)
 
 		// FIXME: need to split navShortcuts?
 		const { setupNavShortcuts } = await import("../common/misc/NavShortcuts.js")
 		setupNavShortcuts()
 
 		// this needs to stay after client.init
-		windowFacade.init(locator.logins)
+		windowFacade.init(calendarLocator.logins)
 		// if (isDesktop()) {
-		// 	import("./common/native/main/UpdatePrompt.js").then(({ registerForUpdates }) => registerForUpdates(locator.desktopSettingsFacade))
+		// 	import("./common/native/main/UpdatePrompt.js").then(({ registerForUpdates }) => registerForUpdates(calendarLocator.desktopSettingsFacade))
 		// }
 
 		const userLanguage = deviceConfig.getLanguage() && languages.find((l) => l.code === deviceConfig.getLanguage())
@@ -111,22 +108,22 @@ import("../mail-app/translations/en.js")
 			})
 
 			// if (isDesktop()) {
-			// 	locator.desktopSettingsFacade.changeLanguage(language.code, language.languageTag)
+			// 	calendarLocator.desktopSettingsFacade.changeLanguage(language.code, language.languageTag)
 			// }
 		}
 
-		locator.logins.addPostLoginAction(() => calendarLocator.postLoginActions())
+		calendarLocator.logins.addPostLoginAction(() => calendarLocator.postLoginActions())
 
 		if (isOfflineStorageAvailable()) {
 			const { CachePostLoginAction } = await import("../common/offline/CachePostLoginAction.js")
-			locator.logins.addPostLoginAction(
+			calendarLocator.logins.addPostLoginAction(
 				async () =>
 					new CachePostLoginAction(
 						await calendarLocator.calendarModel(),
-						locator.entityClient,
-						locator.progressTracker,
-						locator.cacheStorage,
-						locator.logins,
+						calendarLocator.entityClient,
+						calendarLocator.progressTracker,
+						calendarLocator.cacheStorage,
+						calendarLocator.logins,
 					),
 			)
 		}
@@ -153,7 +150,7 @@ import("../mail-app/translations/en.js")
 					prepareAttrs: ({ makeViewModel }) => ({ targetPath: "/calendar", makeViewModel }),
 					requireLogin: false,
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 			termination: makeViewResolver<TerminationViewAttrs, TerminationView, { makeViewModel: () => TerminationViewModel; header: AppHeaderAttrs }>(
 				{
@@ -165,10 +162,10 @@ import("../mail-app/translations/en.js")
 							cache: {
 								makeViewModel: () =>
 									new TerminationViewModel(
-										locator.logins,
+										calendarLocator.logins,
 										calendarLocator.secondFactorHandler,
-										locator.serviceExecutor,
-										locator.entityClient,
+										calendarLocator.serviceExecutor,
+										calendarLocator.entityClient,
 									),
 								header: await calendarLocator.appHeaderAttrs(),
 							},
@@ -177,7 +174,7 @@ import("../mail-app/translations/en.js")
 					prepareAttrs: ({ makeViewModel, header }) => ({ makeViewModel, header }),
 					requireLogin: false,
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 			settings: makeViewResolver<SettingsViewAttrs, SettingsView, { drawerAttrsFactory: () => DrawerMenuAttrs; header: AppHeaderAttrs }>(
 				{
@@ -192,7 +189,7 @@ import("../mail-app/translations/en.js")
 					prepareAttrs: (cache) => ({
 						drawerAttrs: cache.drawerAttrsFactory(),
 						header: cache.header,
-						logins: locator.logins,
+						logins: calendarLocator.logins,
 						credentialsProvider: calendarLocator.credentialsProvider,
 						systemFacade: calendarLocator.systemFacade,
 						webAuthn: calendarLocator.webAuthn,
@@ -207,7 +204,7 @@ import("../mail-app/translations/en.js")
 						recipientsSearchModel: calendarLocator.recipientsSearchModel,
 					}),
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 			search: makeViewResolver<
 				SearchViewAttrs,
@@ -255,7 +252,7 @@ import("../mail-app/translations/en.js")
 						calendarEventModel: cache.calendarEventModel,
 					}),
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 			calendar: makeViewResolver<
 				CalendarViewAttrs,
@@ -318,7 +315,7 @@ import("../mail-app/translations/en.js")
 						calendarEventPreviewModel,
 					}),
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 
 			/**
@@ -331,7 +328,7 @@ import("../mail-app/translations/en.js")
 					const { showSignupDialog } = await import("../common/misc/LoginUtils.js")
 					const { isLegacyDomain } = await import("../common/login/LoginViewModel.js")
 					if (isLegacyDomain()) {
-						const domainConfigProvider = locator.domainConfigProvider()
+						const domainConfigProvider = calendarLocator.domainConfigProvider()
 						const target = new URL(
 							domainConfigProvider.getDomainConfigForHostname(location.hostname, location.protocol, location.port).partneredDomainTransitionUrl,
 						)
@@ -377,7 +374,7 @@ import("../mail-app/translations/en.js")
 					const { showRecoverDialog } = await import("../common/misc/LoginUtils.js")
 					const resetAction = args.resetAction === "password" || args.resetAction === "secondFactor" ? args.resetAction : "password"
 					const mailAddress = typeof args.mailAddress === "string" ? args.mailAddress : ""
-					showRecoverDialog(mailLocator.secondFactorHandler, mailLocator.credentialsProvider, mailAddress, resetAction)
+					showRecoverDialog(calendarLocator.secondFactorHandler, calendarLocator.credentialsProvider, mailAddress, resetAction)
 					m.route.set("/login", {
 						noAutoLogin: true,
 					})
@@ -392,7 +389,7 @@ import("../mail-app/translations/en.js")
 					// getCurrentDomainConfig() takes env.staticUrl into account but we actually don't care about it in this case.
 					// Scenario when it can differ: local desktop client which opens webauthn window and that window is also built with the static URL because
 					// it is the same client build.
-					const domainConfig = locator.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
+					const domainConfig = calendarLocator.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
 					const creds = navigator.credentials
 					return new NativeWebauthnView(new BrowserWebauthn(creds, domainConfig), new WebauthnNativeBridge())
 				},
@@ -400,7 +397,7 @@ import("../mail-app/translations/en.js")
 					requireLogin: false,
 					cacheView: false,
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 			webauthnmobile: makeViewResolver<MobileWebauthnAttrs, MobileWebauthnView, { browserWebauthn: BrowserWebauthn }>(
 				{
@@ -408,7 +405,9 @@ import("../mail-app/translations/en.js")
 						const { MobileWebauthnView } = await import("../common/login/MobileWebauthnView.js")
 						const { BrowserWebauthn } = await import("../common/misc/2fa/webauthn/BrowserWebauthn.js")
 						// see /webauthn view resolver for the explanation
-						const domainConfig = locator.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
+						const domainConfig = calendarLocator
+							.domainConfigProvider()
+							.getDomainConfigForHostname(location.hostname, location.protocol, location.port)
 						return {
 							component: MobileWebauthnView,
 							cache: {
@@ -419,7 +418,7 @@ import("../mail-app/translations/en.js")
 					prepareAttrs: (cache) => cache,
 					requireLogin: false,
 				},
-				locator.logins,
+				calendarLocator.logins,
 			),
 		})
 
@@ -458,10 +457,10 @@ import("../mail-app/translations/en.js")
 		}
 		// if (isDesktop()) {
 		// 	const { exposeNativeInterface } = await import("../common/api/common/ExposeNativeInterface.js")
-		// 	locator.logins.addPostLoginAction(async () => exposeNativeInterface(locator.native).postLoginActions)
+		// 	calendarLocator.logins.addPostLoginAction(async () => exposeNativeInterface(calendarLocator.native).postLoginActions)
 		// }
 		// after we set up prefixWithoutFile
-		const domainConfig = locator.domainConfigProvider().getCurrentDomainConfig()
+		const domainConfig = calendarLocator.domainConfigProvider().getCurrentDomainConfig()
 		const serviceworker = await import("../common/serviceworker/ServiceWorkerClient.js")
 		serviceworker.init(domainConfig, calendarLocator)
 

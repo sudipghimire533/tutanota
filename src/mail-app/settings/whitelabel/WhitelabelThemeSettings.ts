@@ -10,10 +10,10 @@ import * as EditCustomColorsDialog from "./EditCustomColorsDialog"
 import { CustomColorsEditorViewModel } from "./CustomColorsEditorViewModel"
 import type { DomainInfo, WhitelabelConfig } from "../../../common/api/entities/sys/TypeRefs.js"
 import type { ThemeCustomizations } from "../../../common/misc/WhitelabelCustomizations"
-import { locator } from "../../../common/api/main/MainLocator"
 import { showFileChooser } from "../../../common/file/FileController.js"
 import { IconButton } from "../../../common/gui/base/IconButton.js"
 import { ButtonSize } from "../../../common/gui/base/ButtonSize.js"
+import { locator } from "../../../common/api/main/CommonLocator.js"
 
 export type WhitelabelData = {
 	customTheme: ThemeCustomizations

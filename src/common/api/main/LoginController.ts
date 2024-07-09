@@ -10,7 +10,6 @@ import { ResumeSessionErrorReason } from "../worker/facades/LoginFacade"
 import type { Credentials } from "../../misc/credentials/Credentials"
 import { FeatureType, KdfType } from "../common/TutanotaConstants"
 import { SessionType } from "../common/SessionType"
-import { IMainLocator } from "./MainLocator"
 import { ExternalUserKeyDeriver } from "../../misc/LoginUtils.js"
 import { UnencryptedCredentials } from "../../native/common/generatedipc/UnencryptedCredentials.js"
 import { PageContextLoginListener } from "./PageContextLoginListener.js"
@@ -40,10 +39,10 @@ export class LoginController {
 	private postLoginActions: Array<lazy<Promise<PostLoginAction>>> = []
 	private fullyLoggedIn: boolean = false
 	private atLeastPartiallyLoggedIn: boolean = false
-	private loginListener: PageContextLoginListener | null = null
+
+	constructor(private readonly loginListener: PageContextLoginListener, private readonly loginFacade: LoginFacade) {}
 
 	init(loginListener: PageContextLoginListener) {
-		this.loginListener = loginListener
 		this.waitForFullLogin().then(async () => {
 			this.fullyLoggedIn = true
 			await this.waitForPartialLogin()
@@ -57,19 +56,6 @@ export class LoginController {
 		})
 	}
 
-	private async getMainLocator(): Promise<IMainLocator> {
-		const { locator } = await import("./MainLocator")
-		await locator.initialized
-		return locator
-	}
-
-	private async getLoginFacade(): Promise<LoginFacade> {
-		const locator = await this.getMainLocator()
-		const worker = locator.worker
-		await worker.initialized
-		return locator.loginFacade
-	}
-
 	/**
 	 * create a new session and set up stored credentials and offline database, if applicable.
 	 * @param username the mail address being used to log in
@@ -78,8 +64,7 @@ export class LoginController {
 	 * @param databaseKey if given, will use this key for the offline database. if not, will force a new database to be created and generate a key.
 	 */
 	async createSession(username: string, password: string, sessionType: SessionType, databaseKey: Uint8Array | null = null): Promise<NewSessionData> {
-		const loginFacade = await this.getLoginFacade()
-		const newSessionData = await loginFacade.createSession(username, password, client.getIdentifier(), sessionType, databaseKey)
+		const newSessionData = await this.loginFacade.createSession(username, password, client.getIdentifier(), sessionType, databaseKey)
 		const { user, credentials, sessionId, userGroupInfo } = newSessionData
 		await this.onPartialLoginSuccess(
 			{
@@ -125,9 +110,8 @@ export class LoginController {
 		clientIdentifier: string,
 		sessionType: SessionType,
 	): Promise<Credentials> {
-		const loginFacade = await this.getLoginFacade()
 		const persistentSession = sessionType === SessionType.Persistent
-		const { user, credentials, sessionId, userGroupInfo } = await loginFacade.createExternalSession(
+		const { user, credentials, sessionId, userGroupInfo } = await this.loginFacade.createExternalSession(
 			userId,
 			password,
 			salt,
@@ -160,10 +144,9 @@ export class LoginController {
 		externalUserKeyDeriver?: ExternalUserKeyDeriver | null,
 		offlineTimeRangeDays?: number | null,
 	): Promise<ResumeSessionResult> {
-		const loginFacade = await this.getLoginFacade()
 		const { unencryptedToCredentials } = await import("../../misc/credentials/Credentials.js")
 		const credentials = unencryptedToCredentials(unencryptedCredentials)
-		const resumeResult = await loginFacade.resumeSession(
+		const resumeResult = await this.loginFacade.resumeSession(
 			credentials,
 			externalUserKeyDeriver ?? null,
 			unencryptedCredentials.databaseKey ?? null,
@@ -266,10 +249,8 @@ export class LoginController {
 	 * @param pushIdentifier identifier associated with this device, if any, to delete PushIdentifier on the server
 	 */
 	async deleteOldSession(credentials: UnencryptedCredentials, pushIdentifier: string | null = null): Promise<void> {
-		const loginFacade = await this.getLoginFacade()
-
 		try {
-			await loginFacade.deleteSession(credentials.accessToken, pushIdentifier)
+			await this.loginFacade.deleteSession(credentials.accessToken, pushIdentifier)
 		} catch (e) {
 			if (e instanceof NotFoundError) {
 				console.log("session already deleted")
@@ -280,9 +261,7 @@ export class LoginController {
 	}
 
 	async retryAsyncLogin() {
-		const loginFacade = await this.getLoginFacade()
-		const locator = await this.getMainLocator()
 		this.loginListener?.onRetryLogin()
-		await loginFacade.retryAsyncLogin()
+		await this.loginFacade.retryAsyncLogin()
 	}
 }

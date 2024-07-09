@@ -11,11 +11,11 @@ import m, { Children, Component, Vnode } from "mithril"
 import type { CertificateInfo, CustomerInfo } from "../../../common/api/entities/sys/TypeRefs.js"
 import { CertificateState, CertificateType, PlanType } from "../../../common/api/common/TutanotaConstants"
 import { formatDateTime } from "../../../common/misc/Formatter"
-import { locator } from "../../../common/api/main/MainLocator"
 import { IconButton } from "../../../common/gui/base/IconButton.js"
 import { ButtonSize } from "../../../common/gui/base/ButtonSize.js"
 import { ProgrammingError } from "../../../common/api/common/error/ProgrammingError.js"
 import { getAvailablePlansWithWhitelabel } from "../../../common/subscription/SubscriptionUtils.js"
+import { locator } from "../../../common/api/main/CommonLocator.js"
 
 export type WhitelabelBrandingDomainSettingsAttrs = {
 	customerInfo: CustomerInfo

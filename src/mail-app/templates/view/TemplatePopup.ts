@@ -21,7 +21,6 @@ import { Button, ButtonColor, ButtonType } from "../../../common/gui/base/Button
 import { SELECT_NEXT_TEMPLATE, SELECT_PREV_TEMPLATE, TEMPLATE_SHORTCUT_PREFIX, TemplatePopupModel } from "../model/TemplatePopupModel.js"
 import { attachDropdown, DomRectReadOnlyPolyfilled, PosRect } from "../../../common/gui/base/Dropdown.js"
 import { debounce, downcast, neverNull } from "@tutao/tutanota-utils"
-import { locator } from "../../../common/api/main/MainLocator"
 import { TemplateSearchBar } from "./TemplateSearchBar.js"
 import { Editor } from "../../../common/gui/editor/Editor"
 import { getSharedGroupName, hasCapabilityOnGroup } from "../../../common/sharing/GroupUtils"
@@ -30,6 +29,7 @@ import { getConfirmation } from "../../../common/gui/base/GuiUtils"
 import { ScrollSelectList } from "../../../common/gui/ScrollSelectList"
 import { IconButton, IconButtonAttrs } from "../../../common/gui/base/IconButton.js"
 import { TEMPLATE_LIST_ENTRY_WIDTH, TEMPLATE_POPUP_HEIGHT, TEMPLATE_POPUP_TWO_COLUMN_MIN_WIDTH } from "./TemplateConstants.js"
+import { mailLocator } from "../../mailLocator.js"
 
 /**
  *	Creates a Modal/Popup that allows user to paste templates directly into the MailEditor.
@@ -275,7 +275,7 @@ export class TemplatePopup implements ModalComponent {
 		const templateGroupInstances = this._templateModel.getTemplateGroupInstances()
 
 		const writeableGroups = templateGroupInstances.filter((instance) =>
-			hasCapabilityOnGroup(locator.logins.getUserController().user, instance.group, ShareCapability.Write),
+			hasCapabilityOnGroup(mailLocator.logins.getUserController().user, instance.group, ShareCapability.Write),
 		)
 
 		if (templateGroupInstances.length === 0) {
@@ -308,7 +308,7 @@ export class TemplatePopup implements ModalComponent {
 				childAttrs: () =>
 					writeableGroups.map((groupInstances) => {
 						return {
-							label: () => getSharedGroupName(groupInstances.groupInfo, locator.logins.getUserController(), true),
+							label: () => getSharedGroupName(groupInstances.groupInfo, mailLocator.logins.getUserController(), true),
 							click: () => this.showTemplateEditor(null, groupInstances.groupRoot),
 						}
 					}),
@@ -323,7 +323,7 @@ export class TemplatePopup implements ModalComponent {
 
 		const selectedGroup = this._templateModel.getSelectedTemplateGroupInstance()
 
-		const canEdit = !!selectedGroup && hasCapabilityOnGroup(locator.logins.getUserController().user, selectedGroup.group, ShareCapability.Write)
+		const canEdit = !!selectedGroup && hasCapabilityOnGroup(mailLocator.logins.getUserController().user, selectedGroup.group, ShareCapability.Write)
 		return [
 			m(".flex.flex-column.justify-center.mr-m", selectedContent ? m("", lang.get(languageByCode[selectedContent.languageCode].textId)) : ""),
 			m(
@@ -352,7 +352,7 @@ export class TemplatePopup implements ModalComponent {
 						m(IconButton, {
 							title: "editTemplate_action",
 							click: () =>
-								locator.entityClient
+								mailLocator.entityClient
 									.load(TemplateGroupRootTypeRef, neverNull(selectedTemplate._ownerGroup))
 									.then((groupRoot) => this.showTemplateEditor(selectedTemplate, groupRoot)),
 							icon: Icons.Edit,
@@ -361,7 +361,7 @@ export class TemplatePopup implements ModalComponent {
 						m(IconButton, {
 							title: "remove_action",
 							click: () => {
-								getConfirmation("deleteTemplate_msg").confirmed(() => locator.entityClient.erase(selectedTemplate))
+								getConfirmation("deleteTemplate_msg").confirmed(() => mailLocator.entityClient.erase(selectedTemplate))
 							},
 							icon: Icons.Trash,
 							colors: ButtonColor.DrawerNav,

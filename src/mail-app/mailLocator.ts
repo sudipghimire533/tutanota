@@ -14,10 +14,9 @@ import { ContactImporter } from "./contacts/ContactImporter.js"
 import { AddNotificationEmailDialog } from "./settings/AddNotificationEmailDialog.js"
 import { assert, assertNotNull, defer, DeferredObject, lazy, lazyAsync, lazyMemoized, noOp, ofClass } from "@tutao/tutanota-utils"
 import { deviceConfig } from "../common/misc/DeviceConfig.js"
-import { locator } from "../common/api/main/MainLocator.js"
-import { ScopedRouter } from "../common/gui/ScopedRouter.js"
+import { Router, ScopedRouter, ThrottledRouter } from "../common/gui/ScopedRouter.js"
 import type { CredentialRemovalHandler } from "../common/login/CredentialRemovalHandler.js"
-import { FeatureType, GroupType } from "../common/api/common/TutanotaConstants.js"
+import { Const, FeatureType, GroupType, KdfType } from "../common/api/common/TutanotaConstants.js"
 import { PostLoginActions } from "../common/login/PostLoginActions.js"
 import { SearchModel } from "./search/model/SearchModel.js"
 import { CredentialsProvider } from "../common/misc/credentials/CredentialsProvider.js"
@@ -35,7 +34,7 @@ import { InfoMessageHandler } from "../common/gui/InfoMessageHandler.js"
 import { OfflineIndicatorViewModel } from "../common/gui/base/OfflineIndicatorViewModel.js"
 import { DrawerMenuAttrs } from "../common/gui/nav/DrawerMenu.js"
 import { createDesktopInterfaces, createNativeInterfaces, NativeInterfaces } from "../common/native/main/NativeInterfaceFactory.js"
-import { AppHeaderAttrs } from "../common/gui/Header.js"
+import { AppHeaderAttrs, Header } from "../common/gui/Header.js"
 import { SearchViewModel } from "./search/view/SearchViewModel.js"
 import { RecipientsSearchModel } from "../common/misc/RecipientsSearchModel.js"
 import { CredentialFormatMigrator } from "../common/misc/credentials/CredentialFormatMigrator.js"
@@ -59,7 +58,7 @@ import { LoginViewModel } from "../common/login/LoginViewModel.js"
 import { CalendarViewModel } from "../calendar-app/calendar/view/CalendarViewModel.js"
 import { CalendarEventModel, CalendarOperation } from "../calendar-app/calendar/gui/eventeditor-model/CalendarEventModel.js"
 import { CalendarEventsRepository } from "../calendar-app/calendar/date/CalendarEventsRepository.js"
-import { MailboxDetail } from "../common/mailFunctionality/MailModel.js"
+import { MailboxDetail, MailModel } from "../common/mailFunctionality/MailModel.js"
 import { showProgressDialog } from "../common/gui/dialogs/ProgressDialog.js"
 import type { CalendarInfo, CalendarModel } from "../common/calendarFunctionality/CalendarModel.js"
 import type { CalendarEventPreviewViewModel } from "../calendar-app/calendar/gui/eventpopup/CalendarEventPreviewViewModel.js"
@@ -69,10 +68,50 @@ import { CalendarInviteHandler } from "../calendar-app/calendar/view/CalendarInv
 import type { AlarmScheduler } from "../calendar-app/calendar/date/AlarmScheduler.js"
 import { SearchBar } from "./search/SearchBar.js"
 import { bootstrapWorker, WorkerClient } from "../common/api/main/WorkerClient.js"
-import { DiagnosticsChannel } from "undici"
-import Error = DiagnosticsChannel.Error
-import { handleUncaughtError } from "../common/misc/ErrorHandler.js"
-import { objToError } from "../common/api/common/utils/ErrorUtils.js"
+import { EntityClient } from "../common/api/common/EntityClient.js"
+import { WebsocketConnectivityModel } from "../common/misc/WebsocketConnectivityModel.js"
+import { EventController } from "../common/api/main/EventController.js"
+import type { ContactModel } from "../common/contactsFunctionality/ContactModel.js"
+import { ProgressTracker } from "../common/api/main/ProgressTracker.js"
+import type { LoginFacade } from "../common/api/worker/facades/LoginFacade.js"
+import { LoginController } from "../common/api/main/LoginController.js"
+import type { CustomerFacade } from "../common/api/worker/facades/lazy/CustomerFacade.js"
+import type { GiftCardFacade } from "../common/api/worker/facades/lazy/GiftCardFacade.js"
+import type { GroupManagementFacade } from "../common/api/worker/facades/lazy/GroupManagementFacade.js"
+import type { ConfigurationDatabase } from "../common/api/worker/facades/lazy/ConfigurationDatabase.js"
+import type { CalendarFacade } from "../common/api/worker/facades/lazy/CalendarFacade.js"
+import type { MailFacade } from "../common/api/worker/facades/lazy/MailFacade.js"
+import type { ShareFacade } from "../common/api/worker/facades/lazy/ShareFacade.js"
+import type { CounterFacade } from "../common/api/worker/facades/lazy/CounterFacade.js"
+import type { Indexer } from "../common/api/worker/search/Indexer.js"
+import type { SearchFacade } from "../common/api/worker/search/SearchFacade.js"
+import type { BookingFacade } from "../common/api/worker/facades/lazy/BookingFacade.js"
+import type { MailAddressFacade } from "../common/api/worker/facades/lazy/MailAddressFacade.js"
+import type { BlobFacade } from "../common/api/worker/facades/lazy/BlobFacade.js"
+import type { UserManagementFacade } from "../common/api/worker/facades/lazy/UserManagementFacade.js"
+import { RecoverCodeFacade } from "../common/api/worker/facades/lazy/RecoverCodeFacade.js"
+import { ContactFacade } from "../common/api/worker/facades/lazy/ContactFacade.js"
+import { UsageTestController } from "@tutao/tutanota-usagetests"
+import { EphemeralUsageTestStorage, StorageBehavior, UsageTestModel } from "../common/misc/UsageTestModel.js"
+import { IServiceExecutor } from "../common/api/common/ServiceRequest.js"
+import { CryptoFacade } from "../common/api/worker/crypto/CryptoFacade.js"
+import { WebMobileFacade } from "../common/native/main/WebMobileFacade.js"
+import { ExposedCacheStorage } from "../common/api/worker/rest/DefaultEntityRestCache.js"
+import { WorkerFacade } from "../common/api/worker/facades/WorkerFacade.js"
+import { WorkerRandomizer } from "../common/api/worker/WorkerImpl.js"
+import { OperationProgressTracker } from "../common/api/main/OperationProgressTracker.js"
+import { EntropyFacade } from "../common/api/worker/facades/EntropyFacade.js"
+import { SqlCipherFacade } from "../common/native/common/generatedipc/SqlCipherFacade.js"
+import { MailAddressNameChanger, MailAddressTableModel } from "./settings/mailaddress/MailAddressTableModel.js"
+import { SchedulerImpl } from "../common/api/common/utils/Scheduler.js"
+import { DomainConfigProvider } from "../common/api/common/DomainConfigProvider.js"
+import { SendMailModel } from "../common/mailFunctionality/SendMailModel.js"
+import { GroupInfo } from "../common/api/entities/sys/TypeRefs.js"
+import { RecipientsModel } from "../common/api/main/RecipientsModel.js"
+import { NoZoneDateProvider } from "../common/api/common/utils/NoZoneDateProvider.js"
+import { SearchRouter } from "./search/view/SearchRouter.js"
+import { ShareableGroupType } from "../common/sharing/GroupUtils.js"
+import { ReceivedGroupInvitationsModel } from "../common/sharing/model/ReceivedGroupInvitationsModel.js"
 
 assertMainOrNode()
 
@@ -97,6 +136,45 @@ class MailLocator {
 	loginListener!: PageContextLoginListener
 	infoMessageHandler!: InfoMessageHandler
 
+	entropyFacade!: EntropyFacade
+	sqlCipherFacade!: SqlCipherFacade
+	entityClient!: EntityClient
+	loginFacade!: LoginFacade
+	customerFacade!: CustomerFacade
+	giftCardFacade!: GiftCardFacade
+	groupManagementFacade!: GroupManagementFacade
+	configFacade!: ConfigurationDatabase
+	calendarFacade!: CalendarFacade
+	mailFacade!: MailFacade
+	shareFacade!: ShareFacade
+	counterFacade!: CounterFacade
+	indexerFacade!: Indexer
+	searchFacade!: SearchFacade
+	bookingFacade!: BookingFacade
+	mailAddressFacade!: MailAddressFacade
+	blobFacade!: BlobFacade
+	userManagementFacade!: UserManagementFacade
+	recoverCodeFacade!: RecoverCodeFacade
+	contactFacade!: ContactFacade
+	serviceExecutor!: IServiceExecutor
+	cryptoFacade!: CryptoFacade
+	cacheStorage!: ExposedCacheStorage
+	workerFacade!: WorkerFacade
+	random!: WorkerRandomizer
+	connectivityModel!: WebsocketConnectivityModel
+
+	mailModel!: MailModel
+	eventController!: EventController
+	contactModel!: ContactModel
+	progressTracker!: ProgressTracker
+	logins!: LoginController
+	header!: Header
+	usageTestController!: UsageTestController
+	usageTestModel!: UsageTestModel
+	webMobileFacade!: WebMobileFacade
+	operationProgressTracker!: OperationProgressTracker
+	Const!: Record<string, any>
+
 	private readonly workerDeferred: DeferredObject<WorkerClient>
 	private deferredInitialized: DeferredObject<void> = defer()
 
@@ -112,54 +190,98 @@ class MailLocator {
 		// Split init in two separate parts: creating modules and causing side effects.
 		// We would like to do both on normal init but on HMR we just want to replace modules without a new worker. If we create a new
 		// worker we end up losing state on the worker side (including our session).
-		this.worker = bootstrapWorker(locator, this, this.uncaughtErrorHandler)
+		this.worker = bootstrapWorker(this)
 
 		await this.createInstances()
 
-		this.entropyCollector = new EntropyCollector(locator.entropyFacade, await locator.scheduler(), window)
+		this.entropyCollector = new EntropyCollector(this.entropyFacade, await this.scheduler(), window)
 		this.entropyCollector.start()
 
 		this.deferredInitialized.resolve()
 	}
 
-	uncaughtErrorHandler(error: Error) {
-		handleUncaughtError(
-			objToError(message.args[0]),
-			appLocator.commonSystemFacade,
-			appLocator.interWindowEventSender,
-			appLocator.search,
-			appLocator.secondFactorHandler,
-			appLocator.credentialsProvider,
-		)
-	}
-
 	async createInstances() {
+		const {
+			loginFacade,
+			customerFacade,
+			giftCardFacade,
+			groupManagementFacade,
+			configFacade,
+			calendarFacade,
+			mailFacade,
+			shareFacade,
+			counterFacade,
+			indexerFacade,
+			searchFacade,
+			bookingFacade,
+			mailAddressFacade,
+			blobFacade,
+			userManagementFacade,
+			recoverCodeFacade,
+			restInterface,
+			serviceExecutor,
+			cryptoFacade,
+			cacheStorage,
+			random,
+			eventBus,
+			entropyFacade,
+			workerFacade,
+			sqlCipherFacade,
+			contactFacade,
+		} = this.worker.getWorkerInterface()
+		this.loginFacade = loginFacade
+		this.customerFacade = customerFacade
+		this.giftCardFacade = giftCardFacade
+		this.groupManagementFacade = groupManagementFacade
+		this.configFacade = configFacade
+		this.calendarFacade = calendarFacade
+		this.mailFacade = mailFacade
+		this.shareFacade = shareFacade
+		this.counterFacade = counterFacade
+		this.indexerFacade = indexerFacade
+		this.searchFacade = searchFacade
+		this.bookingFacade = bookingFacade
+		this.mailAddressFacade = mailAddressFacade
+		this.blobFacade = blobFacade
+		this.userManagementFacade = userManagementFacade
+		this.recoverCodeFacade = recoverCodeFacade
+		this.contactFacade = contactFacade
+		this.serviceExecutor = serviceExecutor
+		this.sqlCipherFacade = sqlCipherFacade
+		this.entityClient = new EntityClient(restInterface)
+		this.cryptoFacade = cryptoFacade
+		this.cacheStorage = cacheStorage
+		this.entropyFacade = entropyFacade
+		this.workerFacade = workerFacade
+		this.connectivityModel = new WebsocketConnectivityModel(eventBus)
+
 		this.minimizedMailModel = new MinimizedMailEditorViewModel()
 		// TODO: remove calendar events repository from mailLocator when splitting search
-		this.search = new SearchModel(locator.searchFacade, async () => null)
-		this.searchBar = new SearchBar(this.search)
+		this.search = new SearchModel(this.searchFacade, async () => null)
+		this.searchBar = new SearchBar()
 		this.infoMessageHandler = new InfoMessageHandler(this.search)
 
 		if (!isBrowser()) {
 			const { WebDesktopFacade } = await import("../common/native/main/WebDesktopFacade")
 			const { MailWebCommonNativeFacade } = await import("./native/MailWebCommonNativeFacade.js")
 			const { WebInterWindowEventFacade } = await import("../common/native/main/WebInterWindowEventFacade.js")
+			this.webMobileFacade = new WebMobileFacade(this.connectivityModel, this.mailModel)
 			this.nativeInterfaces = createNativeInterfaces(
-				locator.webMobileFacade,
-				new WebDesktopFacade(mailLocator.native),
-				new WebInterWindowEventFacade(locator.logins, windowFacade, deviceConfig),
+				this.webMobileFacade,
+				new WebDesktopFacade(this.native),
+				new WebInterWindowEventFacade(this.logins, windowFacade, deviceConfig),
 				new MailWebCommonNativeFacade(),
-				locator.cryptoFacade,
-				locator.calendarFacade,
-				locator.entityClient,
-				locator.logins,
+				this.cryptoFacade,
+				this.calendarFacade,
+				this.entityClient,
+				this.logins,
 			)
 
 			if (isElectronClient()) {
 				const desktopInterfaces = createDesktopInterfaces(this.native)
 				this.searchTextFacade = desktopInterfaces.searchTextFacade
 				this.interWindowEventSender = desktopInterfaces.interWindowEventSender
-				this.webAuthn = new WebauthnClient(new WebAuthnFacadeSendDispatcher(this.native), locator.domainConfigProvider(), isApp())
+				this.webAuthn = new WebauthnClient(new WebAuthnFacadeSendDispatcher(this.native), this.domainConfigProvider(), isApp())
 				if (isDesktop()) {
 					this.desktopSettingsFacade = desktopInterfaces.desktopSettingsFacade
 					this.desktopSystemFacade = desktopInterfaces.desktopSystemFacade
@@ -167,49 +289,56 @@ class MailLocator {
 			} else if (isAndroidApp() || isIOSApp()) {
 				const { SystemPermissionHandler } = await import("../common/native/main/SystemPermissionHandler.js")
 				this.systemPermissionHandler = new SystemPermissionHandler(this.systemFacade)
-				this.webAuthn = new WebauthnClient(new WebAuthnFacadeSendDispatcher(this.native), locator.domainConfigProvider(), isApp())
+				this.webAuthn = new WebauthnClient(new WebAuthnFacadeSendDispatcher(this.native), this.domainConfigProvider(), isApp())
 			}
 		}
 
 		if (this.webAuthn == null) {
 			this.webAuthn = new WebauthnClient(
-				new BrowserWebauthn(navigator.credentials, locator.domainConfigProvider().getCurrentDomainConfig()),
-				locator.domainConfigProvider(),
+				new BrowserWebauthn(navigator.credentials, this.domainConfigProvider().getCurrentDomainConfig()),
+				this.domainConfigProvider(),
 				isApp(),
 			)
 		}
 		this.credentialsProvider = await this.createCredentialsProvider()
 		this.secondFactorHandler = new SecondFactorHandler(
-			locator.eventController,
-			locator.entityClient,
+			this.eventController,
+			this.entityClient,
 			this.webAuthn,
-			locator.loginFacade,
-			locator.domainConfigProvider(),
-			mailLocator.credentialsProvider,
+			this.loginFacade,
+			this.domainConfigProvider(),
+			this.credentialsProvider,
 		)
 		this.loginListener = new PageContextLoginListener(this.secondFactorHandler)
+		this.logins = new LoginController(this.loginListener, this.loginFacade)
+		this.eventController = new EventController(this.logins)
+		this.progressTracker = new ProgressTracker()
+		this.mailModel = new MailModel(notifications, this.eventController, this.mailFacade, this.entityClient, this.logins)
+		this.operationProgressTracker = new OperationProgressTracker()
 
-		this.newsModel = new NewsModel(locator.serviceExecutor, deviceConfig, async (name: string) => {
+		this.Const = Const
+
+		this.newsModel = new NewsModel(this.serviceExecutor, deviceConfig, async (name: string) => {
 			switch (name) {
 				case "usageOptIn":
 					const { UsageOptInNews } = await import("../common/misc/news/items/UsageOptInNews.js")
-					return new UsageOptInNews(this.newsModel, locator.usageTestModel)
+					return new UsageOptInNews(this.newsModel, this.usageTestModel)
 				case "recoveryCode":
 					const { RecoveryCodeNews } = await import("../common/misc/news/items/RecoveryCodeNews.js")
-					return new RecoveryCodeNews(this.newsModel, locator.logins.getUserController(), locator.recoverCodeFacade)
+					return new RecoveryCodeNews(this.newsModel, this.logins.getUserController(), this.recoverCodeFacade)
 				case "pinBiometrics":
 					const { PinBiometricsNews } = await import("../common/misc/news/items/PinBiometricsNews.js")
-					return new PinBiometricsNews(this.newsModel, this.credentialsProvider, locator.logins.getUserController().userId)
+					return new PinBiometricsNews(this.newsModel, this.credentialsProvider, this.logins.getUserController().userId)
 				case "referralLink":
 					const { ReferralLinkNews } = await import("../common/misc/news/items/ReferralLinkNews.js")
-					const dateProvider = await locator.noZoneDateProvider()
-					return new ReferralLinkNews(this.newsModel, dateProvider, locator.logins.getUserController(), mailLocator.systemFacade)
+					const dateProvider = await this.noZoneDateProvider()
+					return new ReferralLinkNews(this.newsModel, dateProvider, this.logins.getUserController(), this.systemFacade)
 				case "newPlans":
 					const { NewPlansNews } = await import("../common/misc/news/items/NewPlansNews.js")
-					return new NewPlansNews(this.newsModel, locator.logins.getUserController())
+					return new NewPlansNews(this.newsModel, this.logins.getUserController())
 				case "newPlansOfferEnding":
 					const { NewPlansOfferEndingNews } = await import("../common/misc/news/items/NewPlansOfferEndingNews.js")
-					return new NewPlansOfferEndingNews(this.newsModel, locator.logins.getUserController())
+					return new NewPlansOfferEndingNews(this.newsModel, this.logins.getUserController())
 				default:
 					console.log(`No implementation for news named '${name}'`)
 					return null
@@ -218,8 +347,32 @@ class MailLocator {
 
 		this.fileController =
 			this.nativeInterfaces == null
-				? new FileControllerBrowser(locator.blobFacade, guiDownload)
-				: new FileControllerNative(locator.blobFacade, guiDownload, this.nativeInterfaces.fileApp)
+				? new FileControllerBrowser(this.blobFacade, guiDownload)
+				: new FileControllerNative(this.blobFacade, guiDownload, this.nativeInterfaces.fileApp)
+
+		this.usageTestModel = new UsageTestModel(
+			{
+				[StorageBehavior.Persist]: deviceConfig,
+				[StorageBehavior.Ephemeral]: new EphemeralUsageTestStorage(),
+			},
+			{
+				now(): number {
+					return Date.now()
+				},
+				timeZone(): string {
+					throw new Error("Not implemented by this provider")
+				},
+			},
+			this.serviceExecutor,
+			this.entityClient,
+			this.logins,
+			this.eventController,
+			() => this.usageTestController,
+		)
+
+		const { ContactModel } = await import("../common/contactsFunctionality/ContactModel.js")
+		this.contactModel = new ContactModel(this.searchFacade, this.entityClient, this.logins, this.eventController)
+		this.usageTestController = new UsageTestController(this.usageTestModel)
 	}
 
 	// Unique to Mail Locator
@@ -231,10 +384,10 @@ class MailLocator {
 			return new ConversationViewModel(
 				options,
 				(options) => factory(options),
-				locator.entityClient,
-				locator.eventController,
+				this.entityClient,
+				this.eventController,
 				deviceConfig,
-				locator.mailModel,
+				this.mailModel,
 				m.redraw,
 			)
 		}
@@ -247,7 +400,7 @@ class MailLocator {
 
 	contactImporter = async (): Promise<ContactImporter> => {
 		const { ContactImporter } = await import("./contacts/ContactImporter.js")
-		return new ContactImporter(locator.contactFacade, this.systemPermissionHandler)
+		return new ContactImporter(this.contactFacade, this.systemPermissionHandler)
 	}
 
 	async mailViewerViewModelFactory(): Promise<(options: CreateMailViewerOptions) => MailViewerViewModel> {
@@ -256,21 +409,21 @@ class MailLocator {
 			new MailViewerViewModel(
 				mail,
 				showFolder,
-				locator.entityClient,
-				locator.mailModel,
-				locator.contactModel,
-				locator.configFacade,
+				this.entityClient,
+				this.mailModel,
+				this.contactModel,
+				this.configFacade,
 				this.fileController,
-				locator.logins,
+				this.logins,
 				async (mailboxDetails) => {
-					const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
-					return locator.sendMailModel(mailboxDetails, mailboxProperties)
+					const mailboxProperties = await this.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+					return this.sendMailModel(mailboxDetails, mailboxProperties)
 				},
-				locator.eventController,
-				locator.workerFacade,
+				this.eventController,
+				this.workerFacade,
 				this.search,
-				locator.mailFacade,
-				locator.cryptoFacade,
+				this.mailFacade,
+				this.cryptoFacade,
 				() => this.contactImporter(),
 			)
 	}
@@ -283,39 +436,32 @@ class MailLocator {
 	readonly mailViewModel = lazyMemoized(async () => {
 		const { MailViewModel } = await import("./mail/view/MailViewModel.js")
 		const conversationViewModelFactory = await this.conversationViewModelFactory()
-		const router = new ScopedRouter(locator.throttledRouter(), "/mail")
+		const router = new ScopedRouter(this.throttledRouter(), "/mail")
 		return new MailViewModel(
-			locator.mailModel,
-			locator.entityClient,
-			locator.eventController,
-			locator.connectivityModel,
-			locator.cacheStorage,
+			this.mailModel,
+			this.entityClient,
+			this.eventController,
+			this.connectivityModel,
+			this.cacheStorage,
 			conversationViewModelFactory,
 			this.mailOpenedListener,
 			deviceConfig,
 			this.inboxRuleHanlder(),
 			router,
-			await locator.redraw(),
+			await this.redraw(),
 		)
 	})
 
 	readonly nativeContactsSyncManager = lazyMemoized(() => {
 		assert(isApp(), "isApp")
-		return new NativeContactsSyncManager(
-			locator.logins,
-			this.mobileContactsFacade,
-			locator.entityClient,
-			locator.eventController,
-			locator.contactModel,
-			deviceConfig,
-		)
+		return new NativeContactsSyncManager(this.logins, this.mobileContactsFacade, this.entityClient, this.eventController, this.contactModel, deviceConfig)
 	})
 
 	async credentialsRemovalHandler(): Promise<CredentialRemovalHandler> {
 		const { NoopCredentialRemovalHandler, AppsCredentialRemovalHandler } = await import("../common/login/CredentialRemovalHandler.js")
 		return isBrowser()
 			? new NoopCredentialRemovalHandler()
-			: new AppsCredentialRemovalHandler(locator.indexerFacade, this.pushService, locator.configFacade, isApp() ? this.nativeContactsSyncManager() : null)
+			: new AppsCredentialRemovalHandler(this.indexerFacade, this.pushService, this.configFacade, isApp() ? this.nativeContactsSyncManager() : null)
 	}
 
 	readonly mailOpenedListener: MailOpenedListener = {
@@ -327,32 +473,32 @@ class MailLocator {
 	}
 
 	inboxRuleHanlder(): InboxRuleHandler {
-		return new InboxRuleHandler(locator.mailFacade, locator.entityClient, locator.logins)
+		return new InboxRuleHandler(this.mailFacade, this.entityClient, this.logins)
 	}
 
 	async addNotificationEmailDialog(): Promise<AddNotificationEmailDialog> {
 		const { AddNotificationEmailDialog } = await import("./settings/AddNotificationEmailDialog.js")
-		return new AddNotificationEmailDialog(locator.logins, locator.entityClient)
+		return new AddNotificationEmailDialog(this.logins, this.entityClient)
 	}
 
 	readonly contactViewModel = lazyMemoized(async () => {
 		const { ContactViewModel } = await import("./contacts/view/ContactViewModel.js")
-		const router = new ScopedRouter(locator.throttledRouter(), "/contact")
-		return new ContactViewModel(locator.contactModel, locator.entityClient, locator.eventController, router, await locator.redraw())
+		const router = new ScopedRouter(this.throttledRouter(), "/contact")
+		return new ContactViewModel(this.contactModel, this.entityClient, this.eventController, router, await this.redraw())
 	})
 
 	readonly contactListViewModel = lazyMemoized(async () => {
 		const { ContactListViewModel } = await import("./contacts/view/ContactListViewModel.js")
-		const router = new ScopedRouter(locator.throttledRouter(), "/contactlist")
+		const router = new ScopedRouter(this.throttledRouter(), "/contactlist")
 		return new ContactListViewModel(
-			locator.entityClient,
-			locator.groupManagementFacade,
-			locator.logins,
-			locator.eventController,
-			locator.contactModel,
-			await locator.receivedGroupInvitationsModel(GroupType.ContactList),
+			this.entityClient,
+			this.groupManagementFacade,
+			this.logins,
+			this.eventController,
+			this.contactModel,
+			await this.receivedGroupInvitationsModel(GroupType.ContactList),
 			router,
-			await locator.redraw(),
+			await this.redraw(),
 		)
 	})
 
@@ -368,12 +514,12 @@ class MailLocator {
 		return new PostLoginActions(
 			this.credentialsProvider,
 			this.secondFactorHandler,
-			locator.connectivityModel,
-			locator.logins,
-			await locator.noZoneDateProvider(),
-			locator.entityClient,
-			locator.userManagementFacade,
-			locator.customerFacade,
+			this.connectivityModel,
+			this.logins,
+			await this.noZoneDateProvider(),
+			this.entityClient,
+			this.userManagementFacade,
+			this.customerFacade,
 			() => this.showSetupWizard(),
 			() => this.appPartialLoginSuccessActions(),
 			this.calendarModel,
@@ -384,12 +530,12 @@ class MailLocator {
 
 	readonly offlineIndicatorViewModel = lazyMemoized(async () => {
 		return new OfflineIndicatorViewModel(
-			locator.cacheStorage,
+			this.cacheStorage,
 			this.loginListener,
-			locator.connectivityModel,
-			locator.logins,
-			locator.progressTracker,
-			await locator.redraw(),
+			this.connectivityModel,
+			this.logins,
+			this.progressTracker,
+			await this.redraw(),
 		)
 	})
 
@@ -403,25 +549,25 @@ class MailLocator {
 	async searchViewModelFactory(): Promise<() => SearchViewModel> {
 		const { SearchViewModel } = await import("./search/view/SearchViewModel.js")
 		const conversationViewModelFactory = await this.conversationViewModelFactory()
-		const redraw = await locator.redraw()
-		const searchRouter = await locator.scopedSearchRouter()
+		const redraw = await this.redraw()
+		const searchRouter = await this.scopedSearchRouter()
 		return () => {
 			return new SearchViewModel(
 				searchRouter,
 				this.search,
-				locator.searchFacade,
-				locator.mailModel,
-				locator.logins,
-				locator.indexerFacade,
-				locator.entityClient,
-				locator.eventController,
+				this.searchFacade,
+				this.mailModel,
+				this.logins,
+				this.indexerFacade,
+				this.entityClient,
+				this.eventController,
 				this.mailOpenedListener,
-				locator.calendarFacade,
-				locator.progressTracker,
+				this.calendarFacade,
+				this.progressTracker,
 				conversationViewModelFactory,
 				redraw,
 				deviceConfig.getMailAutoSelectBehavior(),
-				mailLocator.calendarModel,
+				this.calendarModel,
 			)
 		}
 	}
@@ -431,7 +577,7 @@ class MailLocator {
 		const suggestionsProvider = isApp()
 			? (query: string) => this.mobileContactsFacade.findSuggestions(query).catch(ofClass(PermissionError, () => []))
 			: null
-		return new RecipientsSearchModel(await locator.recipientsModel(), locator.contactModel, suggestionsProvider, locator.entityClient)
+		return new RecipientsSearchModel(await this.recipientsModel(), this.contactModel, suggestionsProvider, this.entityClient)
 	}
 
 	get native(): NativeInterfaceMain {
@@ -468,7 +614,7 @@ class MailLocator {
 
 	async drawerAttrsFactory(): Promise<() => DrawerMenuAttrs> {
 		return () => ({
-			logins: locator.logins,
+			logins: this.logins,
 			newsModel: this.newsModel,
 			desktopSystemFacade: this.desktopSystemFacade,
 		})
@@ -482,12 +628,12 @@ class MailLocator {
 			: new NoOpAppLock()
 		return () => {
 			const domainConfig = isBrowser()
-				? locator.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
+				? this.domainConfigProvider().getDomainConfigForHostname(location.hostname, location.protocol, location.port)
 				: // in this case, we know that we have a staticUrl set that we need to use
-				  locator.domainConfigProvider().getCurrentDomainConfig()
+				  this.domainConfigProvider().getCurrentDomainConfig()
 
 			return new LoginViewModel(
-				locator.logins,
+				this.logins,
 				this.credentialsProvider,
 				this.secondFactorHandler,
 				deviceConfig,
@@ -512,13 +658,13 @@ class MailLocator {
 			// TODO: fix in setup wizard story #7150, handle nativeContactSyncManager and contactImporter in mailLocator
 			return showSetupWizard(
 				this.systemPermissionHandler,
-				locator.webMobileFacade,
+				this.webMobileFacade,
 				null,
 				this.systemFacade,
 				this.credentialsProvider,
 				null,
 				deviceConfig,
-				mailLocator.pushService,
+				this.pushService,
 			)
 		}
 	}
@@ -539,7 +685,7 @@ class MailLocator {
 	private async createCredentialsProvider(): Promise<CredentialsProvider> {
 		const { CredentialsProvider } = await import("../common/misc/credentials/CredentialsProvider.js")
 		if (isDesktop() || isApp()) {
-			return new CredentialsProvider(this.nativeCredentialsFacade, locator.sqlCipherFacade, isDesktop() ? this.interWindowEventSender : null)
+			return new CredentialsProvider(this.nativeCredentialsFacade, this.sqlCipherFacade, isDesktop() ? this.interWindowEventSender : null)
 		} else {
 			const { WebCredentialsFacade } = await import("../common/misc/credentials/WebCredentialsFacade.js")
 			return new CredentialsProvider(new WebCredentialsFacade(deviceConfig), null, null)
@@ -552,22 +698,22 @@ class MailLocator {
 		const { DefaultDateProvider } = await import("../common/calendarFunctionality/CommonDateUtils.js")
 		const timeZone = new DefaultDateProvider().timeZone()
 		return new CalendarViewModel(
-			locator.logins,
+			this.logins,
 			async (mode: CalendarOperation, event: CalendarEvent) => {
-				const mailboxDetail = await locator.mailModel.getUserMailboxDetails()
-				const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetail.mailboxGroupRoot)
+				const mailboxDetail = await this.mailModel.getUserMailboxDetails()
+				const mailboxProperties = await this.mailModel.getMailboxProperties(mailboxDetail.mailboxGroupRoot)
 				return await this.calendarEventModel(mode, event, mailboxDetail, mailboxProperties, null)
 			},
 			(...args) => this.calendarEventPreviewModel(...args),
 			await this.calendarModel(),
 			await this.calendarEventsRepository(),
-			locator.entityClient,
-			locator.eventController,
-			locator.progressTracker,
+			this.entityClient,
+			this.eventController,
+			this.progressTracker,
 			deviceConfig,
-			await locator.receivedGroupInvitationsModel(GroupType.Calendar),
+			await this.receivedGroupInvitationsModel(GroupType.Calendar),
 			timeZone,
-			locator.mailModel,
+			this.mailModel,
 		)
 	})
 
@@ -575,7 +721,7 @@ class MailLocator {
 		const { CalendarEventsRepository } = await import("../calendar-app/calendar/date/CalendarEventsRepository.js")
 		const { DefaultDateProvider } = await import("../common/calendarFunctionality/CommonDateUtils.js")
 		const timeZone = new DefaultDateProvider().timeZone()
-		return new CalendarEventsRepository(await this.calendarModel(), locator.calendarFacade, timeZone, locator.entityClient, locator.eventController)
+		return new CalendarEventsRepository(await this.calendarModel(), this.calendarFacade, timeZone, this.entityClient, this.eventController)
 	})
 
 	async calendarEventModel(
@@ -590,20 +736,20 @@ class MailLocator {
 			import("../common/calendarFunctionality/CommonTimeUtils.js"),
 			import("../calendar-app/calendar/view/CalendarNotificationSender.js"),
 		])
-		const sendMailModelFactory = await locator.sendMailModelSyncFactory(mailboxDetail, mailboxProperties)
+		const sendMailModelFactory = await this.sendMailModelSyncFactory(mailboxDetail, mailboxProperties)
 		const showProgress = <T>(p: Promise<T>) => showProgressDialog("pleaseWait_msg", p)
 
 		return await makeCalendarEventModel(
 			editMode,
 			event,
-			await locator.recipientsModel(),
+			await this.recipientsModel(),
 			await this.calendarModel(),
-			locator.logins,
+			this.logins,
 			mailboxDetail,
 			mailboxProperties,
 			sendMailModelFactory,
 			calendarNotificationSender,
-			locator.entityClient,
+			this.entityClient,
 			responseTo,
 			getTimeZone(),
 			showProgress,
@@ -615,17 +761,17 @@ class MailLocator {
 		const { getEventType } = await import("../calendar-app/calendar/gui/CalendarGuiUtils.js")
 		const { CalendarEventPreviewViewModel } = await import("../calendar-app/calendar/gui/eventpopup/CalendarEventPreviewViewModel.js")
 
-		const mailboxDetails = await locator.mailModel.getUserMailboxDetails()
+		const mailboxDetails = await this.mailModel.getUserMailboxDetails()
 
-		const mailboxProperties = await locator.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
+		const mailboxProperties = await this.mailModel.getMailboxProperties(mailboxDetails.mailboxGroupRoot)
 
-		const userController = locator.logins.getUserController()
+		const userController = this.logins.getUserController()
 		const customer = await userController.loadCustomer()
 		const ownMailAddresses = getEnabledMailAddressesWithUser(mailboxDetails, userController.userGroupInfo)
 		const ownAttendee: CalendarEventAttendee | null = findAttendeeInAddresses(selectedEvent.attendees, ownMailAddresses)
 		const eventType = getEventType(selectedEvent, calendars, ownMailAddresses, userController.user)
 		const hasBusinessFeature = isCustomizationEnabledForCustomer(customer, FeatureType.BusinessFeatureEnabled) || (await userController.isNewPaidPlan())
-		const lazyIndexEntry = async () => (selectedEvent.uid != null ? locator.calendarFacade.getEventsByUid(selectedEvent.uid) : null)
+		const lazyIndexEntry = async () => (selectedEvent.uid != null ? this.calendarFacade.getEventsByUid(selectedEvent.uid) : null)
 		const popupModel = new CalendarEventPreviewViewModel(
 			selectedEvent,
 			await this.calendarModel(),
@@ -651,13 +797,13 @@ class MailLocator {
 		return new CalendarModel(
 			notifications,
 			this.alarmScheduler,
-			locator.eventController,
-			locator.serviceExecutor,
-			locator.logins,
-			locator.progressTracker,
-			locator.entityClient,
-			locator.mailModel,
-			locator.calendarFacade,
+			this.eventController,
+			this.serviceExecutor,
+			this.logins,
+			this.progressTracker,
+			this.entityClient,
+			this.mailModel,
+			this.calendarFacade,
 			this.fileController,
 			timeZone,
 		)
@@ -666,8 +812,8 @@ class MailLocator {
 	readonly calendarInviteHandler: () => Promise<CalendarInviteHandler> = lazyMemoized(async () => {
 		const { CalendarInviteHandler } = await import("../calendar-app/calendar/view/CalendarInvites.js")
 		const { calendarNotificationSender } = await import("../calendar-app/calendar/view/CalendarNotificationSender.js")
-		return new CalendarInviteHandler(locator.mailModel, await this.calendarModel(), locator.logins, calendarNotificationSender, (...arg) =>
-			locator.sendMailModel(...arg),
+		return new CalendarInviteHandler(this.mailModel, await this.calendarModel(), this.logins, calendarNotificationSender, (...arg) =>
+			this.sendMailModel(...arg),
 		)
 	})
 
@@ -675,11 +821,129 @@ class MailLocator {
 		const { AlarmScheduler } = await import("../calendar-app/calendar/date/AlarmScheduler.js")
 		const { DefaultDateProvider } = await import("../common/calendarFunctionality/CommonDateUtils.js")
 		const dateProvider = new DefaultDateProvider()
-		return new AlarmScheduler(dateProvider, await locator.scheduler())
+		return new AlarmScheduler(dateProvider, await this.scheduler())
 	})
 	// **** end of Unique to Calendar Locator
+
+	// Re-evaluate if needed later
+
+	async ownMailAddressNameChanger(): Promise<MailAddressNameChanger> {
+		const { OwnMailAddressNameChanger } = await import("../mail-app/settings/mailaddress/OwnMailAddressNameChanger.js")
+		return new OwnMailAddressNameChanger(this.mailModel, this.entityClient)
+	}
+
+	async adminNameChanger(mailGroupId: Id, userId: Id): Promise<MailAddressNameChanger> {
+		const { AnotherUserMailAddressNameChanger } = await import("../mail-app/settings/mailaddress/AnotherUserMailAddressNameChanger.js")
+		return new AnotherUserMailAddressNameChanger(this.mailAddressFacade, mailGroupId, userId)
+	}
+
+	// For testing argon2 migration after login. The production server will reject this request.
+	// This can be removed when we enable the migration.
+	async changeToBycrypt(passphrase: string): Promise<unknown> {
+		const currentUser = this.logins.getUserController().user
+		return this.loginFacade.migrateKdfType(KdfType.Bcrypt, passphrase, currentUser)
+	}
+
+	async scheduler(): Promise<SchedulerImpl> {
+		const dateProvider = await this.noZoneDateProvider()
+		return new SchedulerImpl(dateProvider, window, window)
+	}
+
+	domainConfigProvider(): DomainConfigProvider {
+		return new DomainConfigProvider()
+	}
+
+	/** This ugly bit exists because CalendarEventWhoModel wants a sync factory. */
+	async sendMailModelSyncFactory(mailboxDetails: MailboxDetail, mailboxProperties: MailboxProperties): Promise<() => SendMailModel> {
+		const { SendMailModel } = await import("../common/mailFunctionality/SendMailModel.js")
+		const recipientsModel = await this.recipientsModel()
+		const dateProvider = await this.noZoneDateProvider()
+		return () =>
+			new SendMailModel(
+				this.mailFacade,
+				this.entityClient,
+				this.logins,
+				this.mailModel,
+				this.contactModel,
+				this.eventController,
+				mailboxDetails,
+				recipientsModel,
+				dateProvider,
+				mailboxProperties,
+			)
+	}
+
+	async mailAddressTableModelForOwnMailbox(): Promise<MailAddressTableModel> {
+		const { MailAddressTableModel } = await import("../mail-app/settings/mailaddress/MailAddressTableModel.js")
+		const nameChanger = await this.ownMailAddressNameChanger()
+		return new MailAddressTableModel(
+			this.entityClient,
+			this.serviceExecutor,
+			this.mailAddressFacade,
+			this.logins,
+			this.eventController,
+			this.logins.getUserController().userGroupInfo,
+			nameChanger,
+			await this.redraw(),
+		)
+	}
+
+	async mailAddressTableModelForAdmin(mailGroupId: Id, userId: Id, userGroupInfo: GroupInfo): Promise<MailAddressTableModel> {
+		const { MailAddressTableModel } = await import("../mail-app/settings/mailaddress/MailAddressTableModel.js")
+		const nameChanger = await this.adminNameChanger(mailGroupId, userId)
+		return new MailAddressTableModel(
+			this.entityClient,
+			this.serviceExecutor,
+			this.mailAddressFacade,
+			this.logins,
+			this.eventController,
+			userGroupInfo,
+			nameChanger,
+			await this.redraw(),
+		)
+	}
+
+	readonly recipientsModel: lazyAsync<RecipientsModel> = lazyMemoized(async () => {
+		const { RecipientsModel } = await import("../common/api/main/RecipientsModel.js")
+		return new RecipientsModel(this.contactModel, this.logins, this.mailFacade, this.entityClient)
+	})
+
+	async noZoneDateProvider(): Promise<NoZoneDateProvider> {
+		return new NoZoneDateProvider()
+	}
+
+	async sendMailModel(mailboxDetails: MailboxDetail, mailboxProperties: MailboxProperties): Promise<SendMailModel> {
+		const factory = await this.sendMailModelSyncFactory(mailboxDetails, mailboxProperties)
+		return factory()
+	}
+
+	readonly redraw: lazyAsync<() => unknown> = lazyMemoized(async () => {
+		const m = await import("mithril")
+		return m.redraw
+	})
+
+	readonly throttledRouter: lazy<Router> = lazyMemoized(() => new ThrottledRouter())
+
+	readonly scopedSearchRouter: lazyAsync<SearchRouter> = lazyMemoized(async () => {
+		const { SearchRouter } = await import("../mail-app/search/view/SearchRouter.js")
+		return new SearchRouter(new ScopedRouter(this.throttledRouter(), "/search"))
+	})
+
+	readonly unscopedSearchRouter: lazyAsync<SearchRouter> = lazyMemoized(async () => {
+		const { SearchRouter } = await import("../mail-app/search/view/SearchRouter.js")
+		return new SearchRouter(this.throttledRouter())
+	})
+
+	async receivedGroupInvitationsModel<TypeOfGroup extends ShareableGroupType>(groupType: TypeOfGroup): Promise<ReceivedGroupInvitationsModel<TypeOfGroup>> {
+		const { ReceivedGroupInvitationsModel } = await import("../common/sharing/model/ReceivedGroupInvitationsModel.js")
+		return new ReceivedGroupInvitationsModel<TypeOfGroup>(groupType, this.eventController, this.entityClient, this.logins)
+	}
 }
 
 export type IMailLocator = Readonly<MailLocator>
 
 export const mailLocator: IMailLocator = new MailLocator()
+
+if (typeof window !== "undefined") {
+	window.tutao.locator = mailLocator
+}

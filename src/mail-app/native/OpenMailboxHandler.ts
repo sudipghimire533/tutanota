@@ -1,5 +1,5 @@
 import m from "mithril"
-import { locator } from "../../common/api/main/MainLocator.js"
+import { locator } from "../../common/api/main/CommonLocator.js"
 import { MailFolderType } from "../../common/api/common/TutanotaConstants.js"
 
 import { assertSystemFolderOfType } from "../../common/mailFunctionality/CommonMailUtils.js"

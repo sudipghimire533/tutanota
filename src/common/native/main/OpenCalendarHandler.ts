@@ -1,4 +1,4 @@
-import { locator } from "../../api/main/MainLocator.js"
+import { locator } from "../../api/main/CommonLocator.js"
 import m from "mithril"
 
 export function openCalendar(userId: Id) {

@@ -18,7 +18,7 @@ import { ContactImporter } from "../../../../mail-app/contacts/ContactImporter.j
 import { MobileSystemFacade } from "../../common/generatedipc/MobileSystemFacade.js"
 import { CredentialsProvider } from "../../../misc/credentials/CredentialsProvider.js"
 import { NativeContactsSyncManager } from "../../../../mail-app/contacts/model/NativeContactsSyncManager.js"
-import { locator } from "../../../api/main/MainLocator.js"
+import { locator } from "../../../api/main/CommonLocator.js"
 import type { NativePushServiceApp } from "../NativePushServiceApp.js"
 
 export function renderPermissionButton(permissionName: TranslationKey, isPermissionGranted: boolean, onclick: ClickHandler) {

@@ -9,7 +9,7 @@ import { CalendarEventTypeRef, ContactTypeRef, MailTypeRef } from "../../common/
 import type { Shortcut } from "../../common/misc/KeyManager"
 import { isKeyPressed, keyManager } from "../../common/misc/KeyManager"
 import { encodeCalendarSearchKey, getRestriction } from "./model/SearchUtils"
-import { locator } from "../../common/api/main/MainLocator"
+import { locator } from "../../common/api/main/CommonLocator"
 import { Dialog } from "../../common/gui/base/Dialog"
 import type { WhitelabelChild } from "../../common/api/entities/sys/TypeRefs.js"
 import { FULL_INDEXED_TIMESTAMP, Keys } from "../../common/api/common/TutanotaConstants"
@@ -76,11 +76,11 @@ export class SearchBar implements Component<SearchBarAttrs> {
 	private stateStream: Stream<unknown> | null = null
 	private lastQueryStream: Stream<unknown> | null = null
 
-	constructor(private readonly search: SearchModel) {
+	constructor() {
 		this.state = stream<SearchBarState>({
 			query: "",
 			searchResult: null,
-			indexState: this.search.indexState(),
+			indexState: locator.search.indexState(),
 			entities: [] as Entries,
 			selected: null,
 		})
@@ -105,7 +105,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 	 * that shouldn't clear our current state, but if the URL changed in a way that makes the previous state outdated, we clear it.
 	 */
 	private readonly onPathChange = memoized((newPath: string) => {
-		if (this.search.isNewSearch(this.state().query, getRestriction(newPath))) {
+		if (locator.search.isNewSearch(this.state().query, getRestriction(newPath))) {
 			this.updateState({
 				searchResult: null,
 				selected: null,
@@ -201,7 +201,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 
 	oncreate() {
 		keyManager.registerShortcuts(this.shortcuts)
-		this.indexStateStream = this.search.indexState.map((indexState) => {
+		this.indexStateStream = locator.search.indexState.map((indexState) => {
 			// When we finished indexing, search again forcibly to not confuse anyone with old results
 			const currentResult = this.state().searchResult
 
@@ -222,7 +222,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 		})
 
 		this.stateStream = this.state.map((state) => m.redraw())
-		this.lastQueryStream = this.search.lastQueryString.map((value) => {
+		this.lastQueryStream = locator.search.lastQueryString.map((value) => {
 			// Set value from the model when it's set from the URL e.g. reloading the page on the search screen
 			if (value) {
 				this.updateState({
@@ -374,7 +374,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 
 		let restriction = this.getRestriction()
 
-		if (!this.search.indexState().mailIndexEnabled && restriction && isSameTypeRef(restriction.type, MailTypeRef) && !this.confirmDialogShown) {
+		if (!locator.search.indexState().mailIndexEnabled && restriction && isSameTypeRef(restriction.type, MailTypeRef) && !this.confirmDialogShown) {
 			this.focused = false
 			this.confirmDialogShown = true
 			Dialog.confirm("enableSearchMailbox_msg", "search_label")
@@ -396,12 +396,12 @@ export class SearchBar implements Component<SearchBarAttrs> {
 				.finally(() => (this.confirmDialogShown = false))
 		} else {
 			// Skip the search if the user is trying to bypass the search dialog
-			if (!this.search.indexState().mailIndexEnabled && isSameTypeRef(restriction.type, MailTypeRef)) {
+			if (!locator.search.indexState().mailIndexEnabled && isSameTypeRef(restriction.type, MailTypeRef)) {
 				return
 			}
 
-			if (!this.search.isNewSearch(query, restriction) && oldQuery === query) {
-				const result = this.search.result()
+			if (!locator.search.isNewSearch(query, restriction) && oldQuery === query) {
+				const result = locator.search.result()
 
 				if (this.isQuickSearch() && result) {
 					this.showResultsInOverlay(result)
@@ -433,7 +433,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 		// We don't limit contacts because we need to download all of them to sort them. They should be cached anyway.
 		const limit = isSameTypeRef(MailTypeRef, restriction.type) ? (this.isQuickSearch() ? MAX_SEARCH_PREVIEW_RESULTS : PageSize) : null
 
-		this.search
+		locator.search
 			.search(
 				{
 					query: query ?? "",
@@ -456,14 +456,14 @@ export class SearchBar implements Component<SearchBarAttrs> {
 			searchResult: safeResult,
 		})
 
-		if (!safeResult || this.search.isNewSearch(query, safeResult.restriction)) {
+		if (!safeResult || locator.search.isNewSearch(query, safeResult.restriction)) {
 			return
 		}
 
 		if (this.isQuickSearch()) {
 			if (safeLimit && hasMoreResults(safeResult) && safeResult.results.length < safeLimit) {
 				locator.searchFacade.getMoreSearchResults(safeResult, safeLimit - safeResult.results.length).then((moreResults) => {
-					if (this.search.isNewSearch(query, moreResults.restriction)) {
+					if (locator.search.isNewSearch(query, moreResults.restriction)) {
 						return
 					} else {
 						this.loadAndDisplayResult(query, moreResults, limit)
@@ -483,7 +483,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 			// this needs to happen in this order, otherwise the list's result subscription will override our
 			// routing.
 			this.updateSearchUrl("")
-			this.search.result(null)
+			locator.search.result(null)
 		}
 
 		this.updateState({
@@ -497,7 +497,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 	private async showResultsInOverlay(result: SearchResult): Promise<void> {
 		const entries = await loadMultipleFromLists(result.restriction.type, locator.entityClient, result.results)
 		// If there was no new search while we've been downloading the result
-		if (!this.search.isNewSearch(result.query, result.restriction)) {
+		if (!locator.search.isNewSearch(result.query, result.restriction)) {
 			const { filteredEntries, couldShowMore } = this.filterResults(entries, result.restriction)
 
 			if (
@@ -546,7 +546,7 @@ export class SearchBar implements Component<SearchBarAttrs> {
 	}
 
 	private onFocus() {
-		if (!this.search.indexingSupported) {
+		if (!locator.search.indexingSupported) {
 			Dialog.message(isApp() ? "searchDisabledApp_msg" : "searchDisabled_msg")
 		} else if (!this.focused) {
 			this.focused = true

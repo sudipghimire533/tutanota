@@ -15,8 +15,8 @@ import { IconButtonAttrs } from "../../../common/gui/base/IconButton.js"
 import { ButtonSize } from "../../../common/gui/base/ButtonSize.js"
 import { AddressInfo, AddressStatus, MailAddressTableModel } from "./MailAddressTableModel.js"
 import { showAddAliasDialog } from "./AddAliasDialog.js"
-import { locator } from "../../../common/api/main/MainLocator.js"
 import { UpgradeRequiredError } from "../../../common/api/main/UpgradeRequiredError.js"
+import { locator } from "../../../common/api/main/CommonLocator.js"
 
 assertMainOrNode()
 

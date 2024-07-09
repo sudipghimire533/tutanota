@@ -5,7 +5,7 @@ import { ErrorInfo } from "../common/generatedipc/ErrorInfo.js"
 import { NativeShortcut } from "../common/generatedipc/NativeShortcut.js"
 import { Shortcut } from "../../misc/KeyManager.js"
 import { Keys } from "../../api/common/TutanotaConstants.js"
-import { IMainLocator } from "../../api/main/MainLocator.js"
+import { IMainLocator } from "../../api/main/CommonLocator.js"
 import type { NativeInterfaceMain } from "./NativeInterfaceMain.js"
 
 export class WebDesktopFacade implements DesktopFacade {
@@ -93,7 +93,7 @@ export class WebDesktopFacade implements DesktopFacade {
 	}
 
 	private static async getInitializedLocator(): Promise<IMainLocator> {
-		const { locator } = await import("../../api/main/MainLocator")
+		const { locator } = await import("../../api/main/CommonLocator")
 		await locator.initialized
 		return locator
 	}
