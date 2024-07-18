@@ -6,13 +6,15 @@ import { addDaysForRecurringEvent, CalendarTimeRange, getEventEnd, getEventStart
 import { CalendarEvent, CalendarEventTypeRef } from "../../api/entities/tutanota/TypeRefs.js"
 import { getListId, isSameId } from "../../api/common/utils/EntityUtils.js"
 import { DateTime } from "luxon"
-import { CalendarFacade } from "../../api/worker/facades/lazy/CalendarFacade.js"
+import { AlarmInfoTemplate, CalendarFacade } from "../../api/worker/facades/lazy/CalendarFacade.js"
 import { EntityClient } from "../../api/common/EntityClient.js"
 import { findAllAndRemove } from "@tutao/tutanota-utils"
 import { OperationType } from "../../api/common/TutanotaConstants.js"
 import { NotAuthorizedError, NotFoundError } from "../../api/common/error/RestError.js"
 import { EventController } from "../../api/main/EventController.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../../api/common/utils/EntityUpdateUtils.js"
+import { generateEventElementId } from "../../api/common/utils/CommonCalendarUtils.js"
+import { locator } from "../../api/main/CommonLocator.js"
 
 const LIMIT_PAST_EVENTS_YEARS = 100
 
@@ -166,7 +168,46 @@ export class CalendarEventsRepository {
 		const calendarInfos = await this.calendarModel.getCalendarInfos()
 		for (const update of updates) {
 			if (isUpdateForTypeRef(CalendarEventTypeRef, update)) {
-				if (update.operation === OperationType.CREATE || update.operation === OperationType.UPDATE) {
+				if (update.operation === OperationType.CREATE) {
+					try {
+						let event = await this.entityClient.load(CalendarEventTypeRef, [update.instanceListId, update.instanceId])
+						const { userSettingsGroupRoot, user } = locator.logins.getUserController()
+
+						// if we don't need event type, we don't need userGroupInfo or mailAddresses
+						// const userGroupInfo = await this.entityClient.load(GroupInfoTypeRef, user.userGroup.groupInfo)
+						// const mailAddresses = getEnabledMailAddressesForGroupInfo(userGroupInfo)
+						// const eventType = getEventType(event, calendarInfos, mailAddresses, user)
+
+						// if (eventType === EventType.) {
+						// 	// TODO Use user default calendar
+						// }
+
+						const calendarInfo = calendarInfos.get(eventOwnerGroupId) ?? null
+						const calendarGroupSettings = userSettingsGroupRoot.groupSettings.find((gc) => gc.group === calendarInfo?.groupInfo.group)
+						if (calendarInfo && calendarGroupSettings && calendarGroupSettings.defaultAlarmsList.length > 0) {
+							// FIXME: checking ownalarms length is 0 to assume that it is a new event that we are getting fresh
+							// issue: if creator has an alarm the event.alarmInfos will have that alarm in its list
+							const ownAlarmId = user.alarmInfoList?.alarms
+							const ownAlarms = event.alarmInfos.filter((alarmInfo) => alarmInfo[0] === ownAlarmId)
+							if (ownAlarms.length === 0) {
+								const alarmInfos: AlarmInfoTemplate[] =
+									calendarGroupSettings.defaultAlarmsList.map((defaultAlarm) => ({
+										alarmIdentifier: generateEventElementId(event.startTime.valueOf()),
+										trigger: defaultAlarm.trigger,
+									})) ?? []
+
+								this.calendarFacade.updateCalendarEvent(event, alarmInfos, event)
+							}
+						}
+
+						await this.addOrUpdateEvent(calendarInfo, event)
+					} catch (e) {
+						if (e instanceof NotFoundError || e instanceof NotAuthorizedError) {
+							console.log(TAG, e.name, "something went wrong creating event")
+						}
+						throw e
+					}
+				} else if (update.operation === OperationType.UPDATE) {
 					try {
 						const event = await this.entityClient.load(CalendarEventTypeRef, [update.instanceListId, update.instanceId])
 						await this.addOrUpdateEvent(calendarInfos.get(eventOwnerGroupId) ?? null, event)
