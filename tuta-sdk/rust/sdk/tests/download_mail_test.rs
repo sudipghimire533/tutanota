@@ -26,8 +26,8 @@ async fn test_download_mail() {
         encrypted_passphrase_key,
         credential_type: CredentialType::Internal,
     };
-    let sdk = Sdk::new("http://localhost:9000".to_string(), rest_client, credentials, "");
-    let logged_in_sdk = sdk.login().await.unwrap();
+    let sdk = Sdk::new("http://localhost:9000".to_string(), rest_client, "".to_owned());
+    let logged_in_sdk = sdk.login(credentials).await.unwrap();
     let mail_facade = logged_in_sdk.mail_facade();
     let mail = mail_facade.load_email_by_id_encrypted(
         &IdTuple { list_id: GeneratedId("O1qC705-17-0".to_string()), element_id: GeneratedId("O1qC7an--3-0".to_string()) }
