@@ -12,13 +12,14 @@ export async function openMailbox(userId: Id, mailAddress: string, requestedPath
 			const inbox = assertSystemFolderOfType(mailboxDetail.folders, MailSetKind.INBOX)
 			m.route.set("/mail/" + getElementId(inbox))
 		} else {
-			m.route.set("/mail" + requestedPath)
+			m.route.set("/mail" + requestedPath, { focusItem: true })
 		}
 	} else {
 		if (!requestedPath) {
 			m.route.set(`/login?noAutoLogin=false&userId=${userId}&loginWith=${mailAddress}`)
 		} else {
-			m.route.set(`/login?noAutoLogin=false&userId=${userId}&loginWith=${mailAddress}&requestedPath=${encodeURIComponent(requestedPath)}`)
+			const fullRequestedPath = `/mail${requestedPath}?focusItem=true`
+			m.route.set(`/login?noAutoLogin=false&userId=${userId}&loginWith=${mailAddress}&requestedPath=${encodeURIComponent(fullRequestedPath)}`)
 		}
 	}
 }

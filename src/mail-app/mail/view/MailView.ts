@@ -640,6 +640,8 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 
 		if (styles.isSingleColumnLayout() && !args.mailId && this.viewSlider.focusedColumn === this.mailColumn) {
 			this.viewSlider.focusPreviousColumn()
+		} else if (args.focusItem) {
+			this.viewSlider.focus(this.mailColumn)
 		}
 
 		this.mailViewModel.showMailWithFolderId(args.folderId, args.mailId)
