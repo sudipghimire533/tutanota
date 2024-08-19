@@ -128,6 +128,11 @@ import UIKit
 				case .failure: completionHandler(.failed)
 				}
 			}
+		} else {
+			guard let userId = userInfo["userId"] as? String else { return }
+		    guard let mailId = userInfo["mailId"] as? [String] else { return }
+			let address = userInfo["firstRecipient"] as? String ?? ""
+			self.viewController.handleOpenNotification(userId: userId, address: address, mailId: mailId)
 		}
 	}
 

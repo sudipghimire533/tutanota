@@ -85,9 +85,15 @@ class NotificationService: UNNotificationServiceExtension {
 			// We use recipient's address as default value for body. It will be overwritten once
 			// we download email metadata
 			content.body = try await credentialsFacade.loadByUserId(userId)?.credentialInfo.login ?? ""
+
+			let firstRecipient = mail.firstRecipient?.address
+			if firstRecipient != nil {
+				content.userInfo["firstRecipient"] = firstRecipient
+			}
+
 			switch notificationMode {
 			case .no_sender_or_subject:
-				content.title = mail.firstRecipient?.address ?? ""
+				content.title = firstRecipient ?? ""
 				content.body = translate("TutaoPushNewMail", default: "New email received.")
 			case .only_sender:
 				content.title = getSenderOfMail(mail)
@@ -96,7 +102,8 @@ class NotificationService: UNNotificationServiceExtension {
 				content.title = getSenderOfMail(mail)
 				content.body = mail.subject
 			}
-			content.subtitle = mail.firstRecipient?.address ?? userId
+
+			content.subtitle = firstRecipient ?? userId
 			content.threadIdentifier = "\(mail.firstRecipient?.address ?? userId):\(content.title)"
 
 		} catch { TUTSLog("Failed! \(error)") }
