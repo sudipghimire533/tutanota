@@ -18,7 +18,7 @@ import { lang, TranslationKey } from "../../../../common/misc/LanguageViewModel.
 import { BackgroundColumnLayout } from "../../../../common/gui/BackgroundColumnLayout.js"
 import { theme } from "../../../../common/gui/theme.js"
 import { DesktopListToolbar, DesktopViewerToolbar } from "../../../../common/gui/DesktopToolbars.js"
-import { CalendarSearchListViewAttrs, SearchListView } from "./SearchListView.js"
+import { CalendarSearchListView, CalendarSearchListViewAttrs } from "./CalendarSearchListView.js"
 import { isSameId } from "../../../../common/api/common/utils/EntityUtils.js"
 import { keyManager, Shortcut } from "../../../../common/misc/KeyManager.js"
 import { EnterMultiselectIconButton } from "../../../../common/gui/EnterMultiselectIconButton.js"
@@ -178,7 +178,7 @@ export class CalendarSearchView extends BaseTopLevelView implements TopLevelView
 	}
 
 	private getResultColumnLayout() {
-		return m(SearchListView, {
+		return m(CalendarSearchListView, {
 			listModel: this.searchViewModel.listModel,
 			onSingleSelection: (item) => {
 				this.viewSlider.focus(this.resultDetailsColumn)
