@@ -125,6 +125,14 @@ export class MailViewModel {
 
 		await this.setListId(folderToUse)
 
+		if (listId && mailId) {
+			const cached = await this.cacheStorage.get(MailTypeRef, listId, mailId)
+			if (cached) {
+				this.conversationViewModel = this.conversationViewModelFactory({ mail: cached, showFolder: false })
+				this.updateUi()
+			}
+		}
+
 		// if there is a target id and we are not loading for this id already then start loading towards that id
 		if (this.targetMailId && this.targetMailId != this.loadingToTargetId) {
 			this.mailFolderToSelectedMail = mapWith(this.mailFolderToSelectedMail, folderToUse, this.targetMailId)
