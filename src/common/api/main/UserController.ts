@@ -42,7 +42,6 @@ import { SessionType } from "../common/SessionType"
 import { IServiceExecutor } from "../common/ServiceRequest.js"
 import { isCustomizationEnabledForCustomer } from "../common/utils/CustomerUtils.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../common/utils/EntityUpdateUtils.js"
-import { CacheMode } from "../worker/rest/EntityRestClient.js"
 
 assertMainOrNode()
 
@@ -230,7 +229,7 @@ export class UserController {
 		for (const update of updates) {
 			const { instanceListId, instanceId, operation } = update
 			if (this.isUpdateForLoggedInUserInstance(update, eventOwnerGroupId)) {
-				this.user = await this.entityClient.load(UserTypeRef, this.user._id, undefined, undefined, undefined, CacheMode.Bypass)
+				this.user = await this.entityClient.load(UserTypeRef, this.user._id)
 			} else if (
 				operation === OperationType.UPDATE &&
 				isUpdateForTypeRef(GroupInfoTypeRef, update) &&

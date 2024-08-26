@@ -36,7 +36,6 @@ import { locator } from "../api/main/CommonLocator"
 import { CredentialAuthenticationError } from "../api/common/error/CredentialAuthenticationError"
 import type { Params } from "mithril"
 import { LoginState } from "../login/LoginViewModel.js"
-import { CacheMode } from "../api/worker/rest/EntityRestClient.js"
 
 /**
  * Shows warnings if the invoices are not paid or the registration is not approved yet.
