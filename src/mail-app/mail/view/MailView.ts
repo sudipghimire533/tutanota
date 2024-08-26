@@ -59,6 +59,7 @@ import { listSelectionKeyboardShortcuts } from "../../../common/gui/base/ListUti
 import { canDoDragAndDropExport, getFolderName, getMailboxName } from "../../../common/mailFunctionality/SharedMailUtils.js"
 import { BottomNav } from "../../gui/BottomNav.js"
 import { isSpamOrTrashFolder } from "../../../common/api/common/CommonMailUtils.js"
+import { showSnackBar } from "../../../common/gui/base/SnackBar.js"
 
 assertMainOrNode()
 
@@ -112,8 +113,7 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 					const listId = this.mailViewModel.getListId()
 					return m(BackgroundColumnLayout, {
 						backgroundColor: theme.navigation_bg,
-						desktopToolbar: () =>
-							m(DesktopListToolbar, m(SelectAllCheckbox, selectionAttrsForList(this.mailViewModel.listModel)), this.renderFilterButton()),
+						desktopToolbar: () => m(DesktopListToolbar, m(SelectAllCheckbox, selectionAttrsForList(this.mailViewModel)), this.renderFilterButton()),
 						columnLayout: listId
 							? m(
 									"",
@@ -127,6 +127,7 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 										mailViewModel: this.mailViewModel,
 										listId: listId,
 										onSingleSelection: (mail) => {
+											this.mailViewModel.onSingleSelection(mail)
 											if (!this.mailViewModel.listModel?.state.inMultiselect) {
 												this.viewSlider.focus(this.mailColumn)
 
@@ -140,6 +141,15 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 													}
 												})
 											}
+										},
+										onSingleInclusiveSelection: (...args) => {
+											this.mailViewModel?.onSingleInclusiveSelection(...args)
+										},
+										onRangeSelectionTowards: (...args) => {
+											this.mailViewModel.onRangeSelectionTowards(...args)
+										},
+										onSingleExclusiveSelection: (...args) => {
+											this.mailViewModel.onSingleExclusiveSelection(...args)
 										},
 										onClearFolder: async () => {
 											const folder = this.mailViewModel.getSelectedFolder()
@@ -400,7 +410,7 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 
 	private getShortcuts(): Array<Shortcut> {
 		return [
-			...listSelectionKeyboardShortcuts(MultiselectMode.Enabled, () => this.mailViewModel.listModel ?? null),
+			...listSelectionKeyboardShortcuts(MultiselectMode.Enabled, () => this.mailViewModel),
 			{
 				key: Keys.N,
 				exec: () => {
@@ -640,12 +650,20 @@ export class MailView extends BaseTopLevelView implements TopLevelView<MailViewA
 		}
 
 		if (styles.isSingleColumnLayout() && !args.mailId && this.viewSlider.focusedColumn === this.mailColumn) {
-			this.viewSlider.focusPreviousColumn()
+			this.viewSlider.focus(this.listColumn)
 		} else if (args.focusItem) {
 			this.viewSlider.focus(this.mailColumn)
 		}
 
-		this.mailViewModel.showMail(args.listId, args.mailId)
+		this.mailViewModel.showMail(args.listId, args.mailId, args.focusItem, () =>
+			showSnackBar({
+				message: "mailMoved_msg",
+				button: {
+					label: "ok_action",
+					click: noOp,
+				},
+			}),
+		)
 	}
 
 	private async handleFolderDrop(droppedMailId: string, folder: MailFolder) {

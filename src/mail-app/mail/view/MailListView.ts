@@ -29,8 +29,8 @@ import { BootIcons } from "../../../common/gui/base/icons/BootIcons.js"
 import { theme } from "../../../common/gui/theme.js"
 import { VirtualRow } from "../../../common/gui/base/ListUtils.js"
 import { isKeyPressed } from "../../../common/misc/KeyManager.js"
-import { isOfTypeOrSubfolderOf } from "../../../common/mailFunctionality/SharedMailUtils.js"
-import { assertSystemFolderOfType, canDoDragAndDropExport } from "../../../common/mailFunctionality/SharedMailUtils.js"
+import { assertSystemFolderOfType, canDoDragAndDropExport, isOfTypeOrSubfolderOf } from "../../../common/mailFunctionality/SharedMailUtils.js"
+import { ListModel } from "../../../common/misc/ListModel.js"
 
 assertMainOrNode()
 
@@ -41,6 +41,9 @@ export interface MailListViewAttrs {
 	mailViewModel: MailViewModel
 	listId: Id
 	onSingleSelection: (mail: Mail) => unknown
+	onSingleInclusiveSelection: ListModel<Mail>["onSingleInclusiveSelection"]
+	onRangeSelectionTowards: ListModel<Mail>["selectRangeTowards"]
+	onSingleExclusiveSelection: ListModel<Mail>["onSingleExclusiveSelection"]
 }
 
 export class MailListView implements Component<MailListViewAttrs> {
@@ -61,13 +64,17 @@ export class MailListView implements Component<MailListViewAttrs> {
 	showingSpamOrTrash: boolean = false
 	showingDraft: boolean = false
 	showingArchive: boolean = false
-	private mailViewModel: MailViewModel
+	private attrs: MailListViewAttrs
+
+	private get mailViewModel(): MailViewModel {
+		return this.attrs.mailViewModel
+	}
 
 	private readonly renderConfig: RenderConfig<Mail, MailRow> = {
 		itemHeight: size.list_row_height,
 		multiselectionAllowed: MultiselectMode.Enabled,
 		createElement: (dom: HTMLElement) => {
-			const mailRow = new MailRow(false, (entity) => this.mailViewModel.listModel?.onSingleExclusiveSelection(entity))
+			const mailRow = new MailRow(false, (entity) => this.attrs?.onSingleExclusiveSelection(entity))
 			m.render(dom, mailRow.render())
 			return mailRow
 		},
@@ -83,7 +90,7 @@ export class MailListView implements Component<MailListViewAttrs> {
 	}
 
 	constructor({ attrs }: Vnode<MailListViewAttrs>) {
-		this.mailViewModel = attrs.mailViewModel
+		this.attrs = attrs
 		this.listId = attrs.listId
 		this.exportedMails = new Map()
 		this._listDom = null
@@ -298,10 +305,8 @@ export class MailListView implements Component<MailListViewAttrs> {
 	}
 
 	view(vnode: Vnode<MailListViewAttrs>): Children {
-		this.mailViewModel = vnode.attrs.mailViewModel
+		this.attrs = vnode.attrs
 
-		// Save the folder before showing the dialog so that there's no chance that it will change
-		const folder = this.mailViewModel.getSelectedFolder()
 		const purgeButtonAttrs: ButtonAttrs = {
 			label: "clearFolder_action",
 			type: ButtonType.Primary,
@@ -365,14 +370,13 @@ export class MailListView implements Component<MailListViewAttrs> {
 								listModel.retryLoading()
 							},
 							onSingleSelection: (item) => {
-								listModel.onSingleSelection(item)
 								vnode.attrs.onSingleSelection(item)
 							},
 							onSingleTogglingMultiselection: (item: Mail) => {
-								listModel.onSingleInclusiveSelection(item, styles.isSingleColumnLayout())
+								vnode.attrs.onSingleInclusiveSelection(item, styles.isSingleColumnLayout())
 							},
 							onRangeSelectionTowards: (item: Mail) => {
-								listModel.selectRangeTowards(item)
+								vnode.attrs.onRangeSelectionTowards(item)
 							},
 							onStopLoading() {
 								listModel.stopLoading()
