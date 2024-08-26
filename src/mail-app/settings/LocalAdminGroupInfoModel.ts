@@ -1,7 +1,6 @@
 import m from "mithril"
 import type { GroupInfo } from "../../common/api/entities/sys/TypeRefs.js"
 import { GroupInfoTypeRef } from "../../common/api/entities/sys/TypeRefs.js"
-import { GroupType } from "../../common/api/common/TutanotaConstants"
 import { locator } from "../../common/api/main/CommonLocator"
 
 import { noOp, promiseMap } from "@tutao/tutanota-utils"
@@ -34,8 +33,7 @@ class LocalAdminGroupInfoModel {
 			.getUserController()
 			.loadCustomer()
 			.then(async (customer) => {
-				const groupInfos: Array<GroupInfo> = await locator.entityClient.loadAll(GroupInfoTypeRef, customer.teamGroups)
-				this.groupInfos = groupInfos.filter((gi) => gi.groupType === GroupType.LocalAdmin)
+				this.groupInfos = await locator.entityClient.loadAll(GroupInfoTypeRef, customer.teamGroups)
 				return this.groupInfos
 			})
 		return this._initialization

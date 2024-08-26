@@ -42,13 +42,10 @@ export class GroupManagementFacade {
 	}
 
 	async createMailGroup(name: string, mailAddress: string): Promise<void> {
-		let adminGroupIds = this.userFacade.getGroupIds(GroupType.Admin)
+		const adminGroupIds = this.userFacade.getGroupIds(GroupType.Admin)
+		const adminGroupId = assertNotNull(adminGroupIds[0])
 
-		if (adminGroupIds.length === 0) {
-			adminGroupIds = this.userFacade.getGroupIds(GroupType.LocalAdmin)
-		}
-
-		let adminGroupKey = await this.keyLoaderFacade.getCurrentSymGroupKey(adminGroupIds[0])
+		let adminGroupKey = await this.keyLoaderFacade.getCurrentSymGroupKey(adminGroupId)
 		let customerGroupKey = await this.keyLoaderFacade.getCurrentSymGroupKey(this.userFacade.getGroupId(GroupType.Customer))
 		let mailGroupKey = freshVersioned(aes256RandomKey())
 
@@ -59,7 +56,7 @@ export class GroupManagementFacade {
 			keyPair,
 			mailGroupKey.object,
 			mailGroupInfoSessionKey,
-			adminGroupIds[0],
+			adminGroupId,
 			adminGroupKey,
 			customerGroupKey,
 		)
