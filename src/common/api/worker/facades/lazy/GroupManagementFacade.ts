@@ -8,7 +8,7 @@ import {
 	createUserAreaGroupDeleteData,
 	createUserAreaGroupPostData,
 } from "../../../entities/tutanota/TypeRefs.js"
-import { assertNotNull, freshVersioned, neverNull } from "@tutao/tutanota-utils"
+import { assertNotNull, freshVersioned, getFirstOrThrow, neverNull } from "@tutao/tutanota-utils"
 import { createMembershipAddData, createMembershipRemoveData, Group, GroupTypeRef, User, UserTypeRef } from "../../../entities/sys/TypeRefs.js"
 import { CounterFacade } from "./CounterFacade.js"
 import { EntityClient } from "../../../common/EntityClient.js"
@@ -43,7 +43,7 @@ export class GroupManagementFacade {
 
 	async createMailGroup(name: string, mailAddress: string): Promise<void> {
 		const adminGroupIds = this.userFacade.getGroupIds(GroupType.Admin)
-		const adminGroupId = assertNotNull(adminGroupIds[0])
+		const adminGroupId = getFirstOrThrow(adminGroupIds)
 
 		let adminGroupKey = await this.keyLoaderFacade.getCurrentSymGroupKey(adminGroupId)
 		let customerGroupKey = await this.keyLoaderFacade.getCurrentSymGroupKey(this.userFacade.getGroupId(GroupType.Customer))
