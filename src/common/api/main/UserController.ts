@@ -42,6 +42,7 @@ import { SessionType } from "../common/SessionType"
 import { IServiceExecutor } from "../common/ServiceRequest.js"
 import { isCustomizationEnabledForCustomer } from "../common/utils/CustomerUtils.js"
 import { EntityUpdateData, isUpdateForTypeRef } from "../common/utils/EntityUpdateUtils.js"
+import { CacheMode } from "../worker/rest/EntityRestClient.js"
 
 assertMainOrNode()
 
@@ -121,8 +122,8 @@ export class UserController {
 		return this.user.accountType !== AccountType.EXTERNAL
 	}
 
-	loadCustomer(): Promise<Customer> {
-		return this.entityClient.load(CustomerTypeRef, neverNull(this.user.customer))
+	loadCustomer(cacheMode: CacheMode = CacheMode.Cache): Promise<Customer> {
+		return this.entityClient.load(CustomerTypeRef, neverNull(this.user.customer), undefined, undefined, undefined, cacheMode)
 	}
 
 	async loadCustomerInfo(): Promise<CustomerInfo> {

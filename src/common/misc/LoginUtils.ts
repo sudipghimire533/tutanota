@@ -36,6 +36,7 @@ import { locator } from "../api/main/CommonLocator"
 import { CredentialAuthenticationError } from "../api/common/error/CredentialAuthenticationError"
 import type { Params } from "mithril"
 import { LoginState } from "../login/LoginViewModel.js"
+import { CacheMode } from "../api/worker/rest/EntityRestClient.js"
 
 /**
  * Shows warnings if the invoices are not paid or the registration is not approved yet.
@@ -52,7 +53,7 @@ export function checkApprovalStatus(logins: LoginController, includeInvoiceNotPa
 
 	return logins
 		.getUserController()
-		.loadCustomer()
+		.loadCustomer(CacheMode.Bypass)
 		.then((customer) => {
 			const approvalStatus = getCustomerApprovalStatus(customer)
 			const status = approvalStatus === ApprovalStatus.REGISTRATION_APPROVED && defaultStatus != null ? defaultStatus : approvalStatus
