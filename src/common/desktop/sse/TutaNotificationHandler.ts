@@ -64,10 +64,13 @@ export class TutaNotificationHandler {
 
 	private onMailNotificationClick(res: NotificationResult, ni: NotificationInfo) {
 		if (res === NotificationResult.Click) {
-			this.windowManager.openMailBox({
-				userId: ni.userId,
-				mailAddress: ni.mailAddress,
-			})
+			this.windowManager.openMailBox(
+				{
+					userId: ni.userId,
+					mailAddress: ni.mailAddress,
+				},
+				ni.mailId ? `/${ni.mailId.listId}/${ni.mailId.listElementId}` : null,
+			)
 		}
 	}
 
