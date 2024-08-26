@@ -122,8 +122,8 @@ export class UserController {
 		return this.user.accountType !== AccountType.EXTERNAL
 	}
 
-	loadCustomer(cacheMode: CacheMode = CacheMode.Cache): Promise<Customer> {
-		return this.entityClient.load(CustomerTypeRef, neverNull(this.user.customer), undefined, undefined, undefined, cacheMode)
+	loadCustomer(): Promise<Customer> {
+		return this.entityClient.load(CustomerTypeRef, neverNull(this.user.customer))
 	}
 
 	async loadCustomerInfo(): Promise<CustomerInfo> {
@@ -230,7 +230,7 @@ export class UserController {
 		for (const update of updates) {
 			const { instanceListId, instanceId, operation } = update
 			if (this.isUpdateForLoggedInUserInstance(update, eventOwnerGroupId)) {
-				this.user = await this.entityClient.load(UserTypeRef, this.user._id)
+				this.user = await this.entityClient.load(UserTypeRef, this.user._id, undefined, undefined, undefined, CacheMode.Bypass)
 			} else if (
 				operation === OperationType.UPDATE &&
 				isUpdateForTypeRef(GroupInfoTypeRef, update) &&

@@ -53,7 +53,7 @@ export function checkApprovalStatus(logins: LoginController, includeInvoiceNotPa
 
 	return logins
 		.getUserController()
-		.loadCustomer(CacheMode.Bypass)
+		.loadCustomer()
 		.then((customer) => {
 			const approvalStatus = getCustomerApprovalStatus(customer)
 			const status = approvalStatus === ApprovalStatus.REGISTRATION_APPROVED && defaultStatus != null ? defaultStatus : approvalStatus
