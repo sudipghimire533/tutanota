@@ -163,7 +163,7 @@ class IosMobileContactsFacade: MobileContactsFacade {
 	/// Query the local container, ignoring the user's choices for the default contacts location.
 	/// This prevent other apps, as Gmail or even iCloud, from 'stealing' and moving our contacts to their lists.
 	private lazy var localContainer: String = {
-		let store = CNContactStore()
+		let store = CNContactStore() 
 		let defaultContainer = store.defaultContainerIdentifier()
 
 		do {
