@@ -2,7 +2,7 @@ import m, { Component } from "mithril"
 import type { LoggedInEvent, PostLoginAction } from "../api/main/LoginController"
 import { LoginController } from "../api/main/LoginController"
 import { isAdminClient, isApp, isDesktop, LOGIN_TITLE } from "../api/common/Env"
-import { assertNotNull, neverNull, noOp, ofClass } from "@tutao/tutanota-utils"
+import { assertNotNull, delay, neverNull, noOp, ofClass } from "@tutao/tutanota-utils"
 import { windowFacade } from "../misc/WindowFacade.js"
 import { checkApprovalStatus } from "../misc/LoginUtils.js"
 import { locator } from "../api/main/CommonLocator"
@@ -14,7 +14,7 @@ import { isNotificationCurrentlyActive, loadOutOfOfficeNotification } from "../m
 import * as notificationOverlay from "../gui/base/NotificationOverlay"
 import { ButtonType } from "../gui/base/Button.js"
 import { Dialog } from "../gui/base/Dialog"
-import { CloseEventBusOption, Const, OperationType, SecondFactorType } from "../api/common/TutanotaConstants"
+import { CloseEventBusOption, Const, SecondFactorType } from "../api/common/TutanotaConstants"
 import { showMoreStorageNeededOrderDialog } from "../misc/SubscriptionDialogs.js"
 import { notifications } from "../gui/Notifications"
 import { LockedError } from "../api/common/error/RestError"
@@ -27,14 +27,14 @@ import { SessionType } from "../api/common/SessionType"
 import { StorageBehavior } from "../misc/UsageTestModel.js"
 import type { WebsocketConnectivityModel } from "../misc/WebsocketConnectivityModel.js"
 import { DateProvider } from "../api/common/DateProvider.js"
-import { createCustomerProperties, CustomerTypeRef, SecondFactorTypeRef } from "../api/entities/sys/TypeRefs.js"
+import { createCustomerProperties, SecondFactorTypeRef } from "../api/entities/sys/TypeRefs.js"
 import { EntityClient } from "../api/common/EntityClient.js"
 import { shouldShowStorageWarning, shouldShowUpgradeReminder } from "./PostLoginUtils.js"
 import { UserManagementFacade } from "../api/worker/facades/lazy/UserManagementFacade.js"
 import { CustomerFacade } from "../api/worker/facades/lazy/CustomerFacade.js"
 import { deviceConfig } from "../misc/DeviceConfig.js"
 import { ThemeController } from "../gui/ThemeController.js"
-import { EntityUpdateData } from "../api/common/utils/EntityUpdateUtils.js"
+import { EntityUpdateData, isUpdateFor } from "../api/common/utils/EntityUpdateUtils.js"
 
 /**
  * This is a collection of all things that need to be initialized/global state to be set after a user has logged in successfully.
@@ -118,44 +118,29 @@ export class PostLoginActions implements PostLoginAction {
 
 	// Runs the user approval check after the user has been updated or after a timeout
 	private checkApprovalAfterSync(): Promise<void> {
-		return new Promise<void>((resolve) => {
-			// Keep track of whether the listener was removed due to an entity update
-			let wasListenerRun = false
-
-			// Add an event listener to run the check after any customer entity update
-			const listener = async (updates: ReadonlyArray<EntityUpdateData>) => {
-				// Get whether the entity update contains the customer
-				let isCustomerUpdate: boolean = false
-				const customer = this.logins.getUserController().user.customer
-				for (const update of updates) {
-					if (
-						update.operation === OperationType.UPDATE &&
-						update.application === CustomerTypeRef.app &&
-						update.type === CustomerTypeRef.type &&
-						update.instanceId === customer
-					) {
-						isCustomerUpdate = true
-					}
-				}
-
-				if (isCustomerUpdate) {
-					wasListenerRun = true
-					await checkApprovalStatus(this.logins, true)
-					locator.eventController.removeEntityListener(listener)
-					resolve()
-				}
+		// Create a promise we will use to track the completion of the below listener
+		let listenerResolve: () => void
+		const listenerPromise = new Promise<void>((resolve) => {
+			listenerResolve = resolve
+		})
+		// Add an event listener to run the check after any customer entity update
+		const listener = async (updates: ReadonlyArray<EntityUpdateData>) => {
+			// Get whether the entity update contains the customer
+			const customer = await this.logins.getUserController().loadCustomer()
+			const isCustomerUpdate: boolean = updates.some((update) => isUpdateFor(customer, update))
+			if (isCustomerUpdate) {
+				listenerResolve()
 			}
-			locator.eventController.addEntityListener(listener)
+		}
+		locator.eventController.addEntityListener(listener)
 
-			// Timeout if the entity update does not arrive or takes too long to arrive
-			setTimeout(() => {
-				if (!wasListenerRun) {
-					checkApprovalStatus(this.logins, true).then(() => {
-						locator.eventController.removeEntityListener(listener)
-						resolve()
-					})
-				}
-			}, 2000)
+		// Timeout if the entity update does not arrive or takes too long to arrive
+		const timeoutPromise = delay(2000)
+
+		// Remove the listener and start the approval check depending on whether a customer update or the timeout resolves first.
+		return Promise.race([listenerPromise, timeoutPromise]).then(() => {
+			locator.eventController.removeEntityListener(listener)
+			checkApprovalStatus(this.logins, true)
 		})
 	}
 
