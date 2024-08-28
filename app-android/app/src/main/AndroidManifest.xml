@@ -18,6 +18,9 @@
 	<uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS"/>
 	<uses-permission android:name="android.permission.USE_CREDENTIALS"/>
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+	<uses-permission android:name="android.permission.READ_SYNC_SETTINGS"/> <!--FIXME remove after testing -->
+	<uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS"/>
+
 	<uses-permission
 			android:name="android.permission.SCHEDULE_EXACT_ALARM"
 			android:maxSdkVersion="32"/>
@@ -124,7 +127,8 @@
 				android:name="androidx.core.content.FileProvider"
 				android:authorities="${contentProviderAuthority}"
 				android:exported="false"
-				android:grantUriPermissions="true">
+				android:grantUriPermissions="true"
+				android:syncable="true">
 			<meta-data
 					android:name="android.support.FILE_PROVIDER_PATHS"
 					android:resource="@xml/paths"/>
