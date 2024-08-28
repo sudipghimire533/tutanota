@@ -2,7 +2,7 @@ import m, { Component } from "mithril"
 import type { LoggedInEvent, PostLoginAction } from "../api/main/LoginController"
 import { LoginController } from "../api/main/LoginController"
 import { isAdminClient, isApp, isDesktop, LOGIN_TITLE } from "../api/common/Env"
-import { assertNotNull, delay, neverNull, noOp, ofClass } from "@tutao/tutanota-utils"
+import { assertNotNull, defer, delay, neverNull, noOp, ofClass } from "@tutao/tutanota-utils"
 import { windowFacade } from "../misc/WindowFacade.js"
 import { checkApprovalStatus } from "../misc/LoginUtils.js"
 import { locator } from "../api/main/CommonLocator"
@@ -27,14 +27,14 @@ import { SessionType } from "../api/common/SessionType"
 import { StorageBehavior } from "../misc/UsageTestModel.js"
 import type { WebsocketConnectivityModel } from "../misc/WebsocketConnectivityModel.js"
 import { DateProvider } from "../api/common/DateProvider.js"
-import { createCustomerProperties, SecondFactorTypeRef } from "../api/entities/sys/TypeRefs.js"
+import { createCustomerProperties, CustomerTypeRef, SecondFactorTypeRef } from "../api/entities/sys/TypeRefs.js"
 import { EntityClient } from "../api/common/EntityClient.js"
 import { shouldShowStorageWarning, shouldShowUpgradeReminder } from "./PostLoginUtils.js"
 import { UserManagementFacade } from "../api/worker/facades/lazy/UserManagementFacade.js"
 import { CustomerFacade } from "../api/worker/facades/lazy/CustomerFacade.js"
 import { deviceConfig } from "../misc/DeviceConfig.js"
 import { ThemeController } from "../gui/ThemeController.js"
-import { EntityUpdateData, isUpdateFor } from "../api/common/utils/EntityUpdateUtils.js"
+import { EntityUpdateData, isUpdateForTypeRef } from "../api/common/utils/EntityUpdateUtils.js"
 
 /**
  * This is a collection of all things that need to be initialized/global state to be set after a user has logged in successfully.
@@ -119,17 +119,14 @@ export class PostLoginActions implements PostLoginAction {
 	// Runs the user approval check after the user has been updated or after a timeout
 	private checkApprovalAfterSync(): Promise<void> {
 		// Create a promise we will use to track the completion of the below listener
-		let listenerResolve: () => void
-		const listenerPromise = new Promise<void>((resolve) => {
-			listenerResolve = resolve
-		})
+		const listenerDeferral = defer<void>()
 		// Add an event listener to run the check after any customer entity update
 		const listener = async (updates: ReadonlyArray<EntityUpdateData>) => {
 			// Get whether the entity update contains the customer
-			const customer = await this.logins.getUserController().loadCustomer()
-			const isCustomerUpdate: boolean = updates.some((update) => isUpdateFor(customer, update))
-			if (isCustomerUpdate) {
-				listenerResolve()
+			const customer = this.logins.getUserController().user.customer
+			const isCustomerUpdate: boolean = updates.some((update) => isUpdateForTypeRef(CustomerTypeRef, update) && update.instanceId === customer)
+			if (customer != null && isCustomerUpdate) {
+				listenerDeferral.resolve()
 			}
 		}
 		locator.eventController.addEntityListener(listener)
@@ -138,7 +135,7 @@ export class PostLoginActions implements PostLoginAction {
 		const timeoutPromise = delay(2000)
 
 		// Remove the listener and start the approval check depending on whether a customer update or the timeout resolves first.
-		return Promise.race([listenerPromise, timeoutPromise]).then(() => {
+		return Promise.race([listenerDeferral.promise, timeoutPromise]).then(() => {
 			locator.eventController.removeEntityListener(listener)
 			checkApprovalStatus(this.logins, true)
 		})
