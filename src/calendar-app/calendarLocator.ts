@@ -283,6 +283,7 @@ class CalendarLocator {
 			await this.receivedGroupInvitationsModel(GroupType.Calendar),
 			timeZone,
 			this.mailModel,
+			this.contactModel,
 		)
 	})
 

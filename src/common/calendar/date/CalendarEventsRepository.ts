@@ -8,7 +8,7 @@ import { getListId, isSameId } from "../../api/common/utils/EntityUtils.js"
 import { DateTime } from "luxon"
 import { CalendarFacade } from "../../api/worker/facades/lazy/CalendarFacade.js"
 import { EntityClient } from "../../api/common/EntityClient.js"
-import { findAllAndRemove } from "@tutao/tutanota-utils"
+import { clone, findAllAndRemove, getStartOfDay } from "@tutao/tutanota-utils"
 import { OperationType } from "../../api/common/TutanotaConstants.js"
 import { NotAuthorizedError, NotFoundError } from "../../api/common/error/RestError.js"
 import { EventController } from "../../api/main/EventController.js"
@@ -31,6 +31,8 @@ export class CalendarEventsRepository {
 	private readonly loadedMonths = new Set<number>()
 	private daysToEvents: Stream<DaysToEvents> = stream(new Map())
 	private pendingLoadRequest: Promise<void> = Promise.resolve()
+
+	private clientOnlyEvents: Map<number, CalendarEvent[]> = new Map()
 
 	constructor(
 		private readonly calendarModel: CalendarModel,
@@ -69,6 +71,20 @@ export class CalendarEventsRepository {
 					try {
 						const calendarInfos = await this.calendarModel.getCalendarInfos()
 						this.replaceEvents(await this.calendarFacade.updateEventMap(month, calendarInfos, this.daysToEvents(), this.zone))
+
+						const clientOnlyEventsOfThisMonth = this.clientOnlyEvents.get(month.start)
+						if (clientOnlyEventsOfThisMonth) {
+							const newMap = this.cloneEvents()
+							for (const calendarEvent of clientOnlyEventsOfThisMonth) {
+								const dayStart = getStartOfDay(calendarEvent.startTime).getTime()
+								let record = newMap.get(dayStart)
+								if (!record) record = []
+								record.push(calendarEvent)
+								newMap.set(dayStart, record)
+							}
+							console.log(newMap)
+							this.replaceEvents(newMap)
+						}
 					} catch (e) {
 						this.loadedMonths.delete(month.start)
 						throw e
@@ -81,7 +97,7 @@ export class CalendarEventsRepository {
 		await promiseForThisLoadRequest
 	}
 
-	private async addOrUpdateEvent(calendarInfo: CalendarInfo | null, event: CalendarEvent) {
+	public async addOrUpdateEvent(calendarInfo: CalendarInfo | null, event: CalendarEvent) {
 		if (calendarInfo == null) {
 			return
 		}
@@ -181,5 +197,16 @@ export class CalendarEventsRepository {
 				}
 			}
 		}
+	}
+
+	public pushClientOnlyEvent(startOfMonth: number, newEvent: CalendarEvent) {
+		let record = this.clientOnlyEvents.get(startOfMonth)
+		if (!record) record = []
+		record.push(newEvent)
+		this.clientOnlyEvents.set(startOfMonth, record)
+	}
+
+	public getClientOnlyEvents() {
+		return this.clientOnlyEvents
 	}
 }

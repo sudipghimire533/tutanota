@@ -334,6 +334,7 @@ class MailLocator {
 			await this.receivedGroupInvitationsModel(GroupType.Calendar),
 			timeZone,
 			this.mailModel,
+			this.contactModel,
 		)
 	})
 
