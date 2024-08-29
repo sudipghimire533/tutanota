@@ -173,7 +173,11 @@ class AndroidMobileContactsFacade(private val activity: MainActivity) : MobileCo
 		val accounts = AccountManager.get(activity).getAccountsByType(TUTA_ACCOUNT_TYPE)
 		for (account in accounts) {
 			Log.d(TAG, "Migrating account to syncable")
-			ContentResolver.setIsSyncable(account, ContactsContract.AUTHORITY, 1)
+			try {
+				ContentResolver.setIsSyncable(account, ContactsContract.AUTHORITY, 1)
+			} catch (e: Exception) {
+				Log.w(TAG, e)
+			}
 			val isSyncable = ContentResolver.getIsSyncable(account, ContactsContract.AUTHORITY)
 			Log.d(TAG, "${account.name}: $isSyncable")
 		}
