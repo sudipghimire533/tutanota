@@ -80,7 +80,7 @@ impl ImportableMailAttachment {
 		let reference_tokens = essentials
 			.logged_in_sdk
 			.blob_facade()
-			.encrypt_and_upload(
+			.encrypt_and_upload_single_legacy(
 				ArchiveDataType::Attachments,
 				&essentials.target_owner_group,
 				&session_key_for_file,
